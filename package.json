@@ -16,7 +16,9 @@
   },
   "dependencies": {
     "babel-runtime": "5.8.24",
+    "es6-promisify": "^3.0.0",
     "lodash": "^3.10.1",
+    "pasync": "^1.4.0",
     "xerror": "^1.0.0"
   },
   "devDependencies": {
