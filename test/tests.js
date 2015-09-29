@@ -385,6 +385,7 @@ describe('Class LockerSet', () => {
 				expect(lockSet.locks[0].keys[0]).to.equal('key');
 				expect(lockSet.locks[0].keys[1]).to.equal('key1');
 				expect(lockSet.locks[0].keys[2]).to.equal('key2');
+				expect(lockSet.locks[0].tokens.length).to.equal(3);
 				expect(lockSet.locks[0].isLocked).to.equal(true);
 				return lockSet.release();
 			}).then( () => {
