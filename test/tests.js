@@ -129,8 +129,8 @@ describe('Class Locker', () => {
 						} else {
 							expect(error).to.exist;
 							expect(error).to.be.an.instanceof(XError);
-							// expect(error.code).to.equal(XError.RESOURCE_LOCKED);
-							expect(error.message).to.equal('Resource Locked');
+							expect(error.code).to.equal(XError.RESOURCE_LOCKED);
+							expect(error.message).to.equal('A lock cannot be acquired on the resource: key');
 						}
 					});
 				} else {
@@ -158,8 +158,8 @@ describe('Class Locker', () => {
 						} else {
 							expect(error).to.exist;
 							expect(error).to.be.an.instanceof(XError);
-							// expect(error.code).to.equal(XError.RESOURCE_LOCKED);
-							expect(error.message).to.equal('Time out waiting for lock: key');
+							expect(error.code).to.equal(XError.RESOURCE_LOCKED);
+							expect(error.message).to.equal('Timed out trying to get a resource lock for: key');
 						}
 					});
 				} else {
@@ -281,8 +281,8 @@ describe('Class Locker', () => {
 				} else {
 					expect(error).to.exist;
 					expect(error).to.be.an.instanceof(XError);
-					// expect(error.code).to.equal(XError.RESOURCE_LOCKED);
-					expect(error.message).to.equal('Resource Locked');
+					expect(error.code).to.equal(XError.RESOURCE_LOCKED);
+					expect(error.message).to.equal('A lock cannot be acquired on the resource: key');
 				}
 			});
 		});
@@ -301,8 +301,8 @@ describe('Class Locker', () => {
 				} else {
 					expect(error).to.exist;
 					expect(error).to.be.an.instanceof(XError);
-					// expect(error.code).to.equal(XError.RESOURCE_LOCKED);
-					expect(error.message).to.equal('Time out waiting for lock: key');
+					expect(error.code).to.equal(XError.RESOURCE_LOCKED);
+					expect(error.message).to.equal('Timed out trying to get a resource lock for: key');
 				}
 			});
 		});
