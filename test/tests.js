@@ -1,4 +1,5 @@
 const expect = require('chai').expect;
+const sinon = require('sinon');
 const Locker = require('../lib/locker');
 const RedizClient = require('zs-rediz');
 const LockSet = require('../lib/lock-set');
@@ -48,21 +49,30 @@ describe('Class Locker', () => {
 	});
 
 	describe('#readLock', () => {
+		let writeLockMock;
+		after( (done) => {
+			if (writeLockMock) {
+				writeLockMock.restore();
+				done();
+			} else {
+				done();
+			}
+		});
 
 		it('should lock read for a single key and release it', () => {
 			let readLock;
-			return locker.readLock('myKey').then( (rwlock) => {
+			return locker.readLock('key').then( (rwlock) => {
 				readLock = rwlock;
 				expect(rwlock).to.be.an.instanceof(RWLock);
 				expect(rwlock.keys.length).to.equal(1);
-				expect(rwlock.keys[0]).to.equal('myKey');
+				expect(rwlock.keys[0]).to.equal('key');
 				expect(rwlock.locker).to.equal(locker);
 				return rwlock.release();
 			}).then( () => {
 				expect(readLock.isLocked).to.equal(false);
 			}).catch( (error) => {
 				if (readLock) {
-					readLock.release().then( () => {
+					return readLock.release().then( () => {
 						throw error;
 					});
 				} else {
@@ -73,23 +83,26 @@ describe('Class Locker', () => {
 
 		it('should lock read for a multiple keys and release them all', () => {
 			let readLock;
-			return locker.readLock([ 'key1', 'key2', 'key3' ],
+			return locker.readLock([ 'key', 'key1', 'key2' ],
 				{ lockTimeout: 100, maxWaitTime: 20 }).then( (rwlock) => {
 					readLock = rwlock;
 					expect(rwlock).to.be.an.instanceof(RWLock);
 					expect(rwlock.keys.length).to.equal(3);
-					expect(rwlock.keys[0]).to.equal('key1');
-					expect(rwlock.keys[1]).to.equal('key2');
-					expect(rwlock.keys[2]).to.equal('key3');
+					expect(rwlock.keys[0]).to.equal('key');
+					expect(rwlock.keys[1]).to.equal('key1');
+					expect(rwlock.keys[2]).to.equal('key2');
 					expect(rwlock.locker).to.equal(locker);
 					expect(rwlock.isWriteLock).to.equal(false);
 					expect(rwlock.isLocked).to.equal(true);
 					return rwlock.release();
 				}).then( () => {
 					expect(readLock.isLocked).to.equal(false);
+					expect(readLock.keys[0]).to.equal('key');
+					expect(readLock.keys[1]).to.equal('key1');
+					expect(readLock.keys[2]).to.equal('key2');
 				}).catch( (error) => {
 					if (readLock) {
-						readLock.release().then( () => {
+						return readLock.release().then( () => {
 							throw error;
 						});
 					} else {
@@ -99,40 +112,113 @@ describe('Class Locker', () => {
 		});
 
 		it('should time out when trying to access an already read locked key', () => {
-			let readLock;
-			return locker.readLock([ 'key1', 'key1' ], { maxWaitTime: 0, lockTimeout: 12000000 }).then( (rwlock) => {
+			let readLock, writeLock;
+			return locker.writeLock('key', { maxWaitTime: 0, lockTimeout: 10 }).then( (rwlock) => {
+				writeLock = rwlock;
+				return locker.readLock('key', { maxWaitTime: 0 });
+			}).then( (rwlock) => {
 				readLock = rwlock;
 				expect(rwlock).to.not.exist;
 			}).catch( (error) => {
-				if (readLock) {
-					readLock.release().then( () => {
-						throw error;
+				if (writeLock) {
+					return writeLock.release().then( () => {
+						if (readLock) {
+							return readLock.release().then( () => {
+								throw error;
+							});
+						} else {
+							expect(error).to.exist;
+							expect(error).to.be.an.instanceof(XError);
+							// expect(error.code).to.equal(XError.RESOURCE_LOCKED);
+							expect(error.message).to.equal('Resource Locked');
+						}
 					});
 				} else {
-					expect(error).to.exist;
-					expect(error).to.be.an.instanceof(XError);
-					// expect(error.code).to.equal(XError.RESOURCE_LOCKED);
-					expect(error.message).to.equal('Resource Locked');
+					throw error;
 				}
 			});
 		});
 
 		it('should time out when maxWaitTime is reached', function() {
 			this.timeout(5000);
-			let readLock;
-			return locker.readLock([ 'key1', 'key1' ], { maxWaitTime: 2, lockTimeout: 12000000 }).then( (rwlock) => {
+			let readLock, writeLock;
+			return locker.writeLock('key', { maxWaitTime: 0, lockTimeout: 10 }).then( (rwlock) => {
+				writeLock = rwlock;
+				return locker.writeLock('key', { maxWaitTime: 2 });
+			}).then( (rwlock) => {
 				readLock = rwlock;
 				expect(rwlock).to.not.exist;
 			}).catch( (error) => {
+				if (writeLock) {
+					return writeLock.release().then( () => {
+						if (readLock) {
+							return readLock.release().then( () => {
+								throw error;
+							});
+						} else {
+							expect(error).to.exist;
+							expect(error).to.be.an.instanceof(XError);
+							// expect(error.code).to.equal(XError.RESOURCE_LOCKED);
+							expect(error.message).to.equal('Time out waiting for lock: key');
+						}
+					});
+				} else {
+					throw error;
+				}
+			});
+		});
+
+		it('should lock all reads, and then upgrade them to writes', () => {
+			let readLock;
+			return locker.readLock([ 'key', 'key1' ]).then( (rwlock) => {
+				readLock = rwlock;
+				expect(rwlock).to.exist;
+				expect(rwlock.keys.length).to.equal(2);
+				expect(rwlock.keys[0]).to.equal('key');
+				expect(rwlock.keys[1]).to.equal('key1');
+				expect(rwlock.isWriteLock).to.equal(false);
+				return rwlock.upgrade();
+			}).then( () => {
+				expect(readLock.isWriteLock).to.equal(true);
+				expect(readLock.tokens.length).to.equal(2);
+				expect(readLock.keys.length).to.equal(2);
+				expect(readLock.keys[0]).to.equal('key');
+				expect(readLock.keys[1]).to.equal('key1');
+				return readLock.release();
+			}).catch( (error) => {
 				if (readLock) {
-					readLock.release().then( () => {
+					return readLock.release().then( () => {
 						throw error;
 					});
 				} else {
-					expect(error).to.exist;
-					expect(error).to.be.an.instanceof(XError);
-					// expect(error.code).to.equal(XError.RESOURCE_LOCKED);
-					expect(error.message).to.equal('Time out waiting for lock: key1');
+					throw error;
+				}
+			});
+		});
+
+		it('should attempts to upgrade, fails and releases all the locks', () => {
+			let readLock;
+			writeLockMock = sinon.mock(locker);
+			writeLockMock.expects('writeLock').once().throws(new XError(XError.INTERNAL_ERROR));
+			return locker.readLock([ 'key', 'key1' ]).then( (rwlock) => {
+				readLock = rwlock;
+				expect(rwlock).to.exist;
+				expect(rwlock.keys.length).to.equal(2);
+				expect(rwlock.keys[0]).to.equal('key');
+				expect(rwlock.keys[1]).to.equal('key1');
+				expect(rwlock.isWriteLock).to.equal(false);
+				return rwlock.upgrade({ onError: 'release' });
+			}).then( () => {
+				throw new Error();
+			}).catch( (error) => {
+				if (readLock.isLocked) {
+					return readLock.release().then( () => {
+						throw Error('This test should have unlocked the readlock');
+					});
+				} else {
+					writeLockMock.verify();
+					expect(readLock.isLocked).to.equal(false);
+					expect(readLock.keys[0]).to.equal('key');
 				}
 			});
 		});
@@ -142,19 +228,19 @@ describe('Class Locker', () => {
 
 		it('should lock write for a single key', () => {
 			let writeLocker;
-			return locker.writeLock('writeKey', { lockTimeout: 1 }).then( (rwlock) => {
+			return locker.writeLock('key').then( (rwlock) => {
 				writeLocker = rwlock;
 				expect(rwlock).to.be.an.instanceof(RWLock);
 				expect(rwlock.keys.length).to.equal(1);
 				expect(rwlock.tokens.length).to.equal(1);
-				expect(rwlock.keys[0]).to.equal('writeKey');
+				expect(rwlock.keys[0]).to.equal('key');
 				expect(rwlock.locker).to.equal(locker);
 				return rwlock.release();
 			}).then( () => {
 				expect(writeLocker.isLocked).to.equal(false);
 			}).catch( (error) => {
 				if (writeLocker) {
-					writeLocker.release().then( () => {
+					return writeLocker.release().then( () => {
 						throw error;
 					});
 				} else {
@@ -165,7 +251,7 @@ describe('Class Locker', () => {
 
 		it('should create a lock for multiple keys', () => {
 			let writeLocker;
-			return locker.writeLock([ 'writeKey1', 'writeKey2' ], { lockTimeout: 1 }).then( (rwlock) => {
+			return locker.writeLock([ 'key', 'key1' ]).then( (rwlock) => {
 				writeLocker = rwlock;
 				expect(rwlock).to.be.an.instanceof(RWLock);
 				expect(rwlock.keys.length).to.equal(2);
@@ -173,25 +259,23 @@ describe('Class Locker', () => {
 				return rwlock.release();
 			}).then( () => {
 				expect(writeLocker.isLocked).to.equal(false);
+				expect(writeLocker.keys[0]).to.equal('key');
+				expect(writeLocker.keys[1]).to.equal('key1');
 			}).catch( (error) => {
-				if (writeLocker) {
-					writeLocker.release().then( () => {
-						throw error;
-					});
-				} else {
+				return writeLocker.release().then( () => {
 					throw error;
-				}
+				});
 			});
 		});
 
 		it('should fail when trying to lock a previously locked write locker', () => {
 			let writeLocker;
-			return locker.writeLock([ 'wKey1', 'wKey1' ], { maxWaitTime: 0 }).then( (rwlock) => {
+			return locker.writeLock([ 'key', 'key' ], { maxWaitTime: 0 }).then( (rwlock) => {
 				writeLocker = rwlock;
 				expect(rwlock).to.not.exist;
 			}).catch( (error) => {
 				if (writeLocker) {
-					writeLocker.release().then( () => {
+					return writeLocker.release().then( () => {
 						throw error;
 					});
 				} else {
@@ -206,19 +290,19 @@ describe('Class Locker', () => {
 		it('should time out when maxWaitTime is reached', function() {
 			this.timeout(5000);
 			let writeLocker;
-			return locker.readLock([ 'wKey1', 'wKey1' ], { maxWaitTime: 2, lockTimeout: 12000000 }).then( (rwlock) => {
+			return locker.writeLock([ 'key', 'key' ], { maxWaitTime: 2 }).then( (rwlock) => {
 				writeLocker = rwlock;
 				expect(rwlock).to.not.exist;
 			}).catch( (error) => {
 				if (writeLocker) {
-					writeLocker.release().then( () => {
+					return writeLocker.release().then( () => {
 						throw error;
 					});
 				} else {
 					expect(error).to.exist;
 					expect(error).to.be.an.instanceof(XError);
 					// expect(error.code).to.equal(XError.RESOURCE_LOCKED);
-					expect(error.message).to.equal('Time out waiting for lock: wKey1');
+					expect(error.message).to.equal('Time out waiting for lock: key');
 				}
 			});
 		});
@@ -246,30 +330,67 @@ describe('Class Locker', () => {
 		});
 
 		it('should lock a read, run a promise function that resolves and release the key', () => {
+			let readLocker;
 			return locker.readLockWrap('key', (callback) => {
 				return new Promise( (resolve, reject) => {
 					setTimeout( () => {
-						return reject(new Error());
+						return reject(new Error('Error'));
 					}, 5);
 				});
 			}).catch( (error) => {
 				expect(error).to.exist;
+				expect(error.message).to.equal('Error');
+				// if you can immediatley lock after error, the key was released
+				return locker.readLock('key', { maxWaitTime: 0 }).then( (rwlock) => {
+					readLocker = rwlock;
+					expect(rwlock).to.exist;
+					expect(rwlock.isLocked).to.equal(true);
+				}).then( () => {
+					return readLocker.release();
+				}).catch( (error) => {
+					if (readLocker) {
+						return readLocker.release().then( () => {
+							throw error;
+						});
+					} else {
+						throw error;
+					}
+				});
 			});
 		});
 
 		it('should lock a read, run the function that throws an errors and still release the key', () => {
+			let readLocker;
 			return locker.readLockWrap('key', () => {
 				throw new Error('Oh! No!');
 			}).catch( (error) => {
 				expect(error).to.exist;
 				expect(error.message).to.equal('Oh! No!');
+				// if you can immediatley lock after error, the key was released
+				return locker.readLock('key', { maxWaitTime: 0 }).then( (rwlock) => {
+					readLocker = rwlock;
+					expect(rwlock).to.exist;
+					expect(rwlock.isLocked).to.equal(true);
+				}).then( () => {
+					return readLocker.release();
+				}).then( () => {
+					expect(readLocker.isLocked).to.equal(false);
+				}).catch( (error) => {
+					if (readLocker) {
+						return readLocker.release().then( () => {
+							throw error;
+						});
+					} else {
+						throw error;
+					}
+				});
 			});
 		});
 	});
 
 	describe('#WriteLockWrap', () => {
 		it('should lock a write, run the function and release the key', () => {
-			return locker.writeLockWrap('key', () => {
+			return locker.writeLockWrap('key', { maxWaitTime: 0 }, () => {
 				return 1;
 			}).then( (result) => {
 				expect(result).to.equal(1);
@@ -277,7 +398,7 @@ describe('Class Locker', () => {
 		});
 
 		it('should lock a write, run a promise function that rejects and release the key', () => {
-			return locker.readLockWrap('key', (callback) => {
+			return locker.writeLockWrap('key', { maxWaitTime: 0 }, (callback) => {
 				return new Promise( (resolve, reject) => {
 					setTimeout( () => {
 						return resolve(1);
@@ -289,23 +410,58 @@ describe('Class Locker', () => {
 		});
 
 		it('should lock a write, run a promise function that rejects and release the key', () => {
-			return locker.readLockWrap('key', (callback) => {
+			let writeLocker;
+			return locker.writeLockWrap('key', { maxWaitTime: 0 }, (callback) => {
 				return new Promise( (resolve, reject) => {
 					setTimeout( () => {
-						return reject(new Error());
+						return reject(new Error('Error'));
 					}, 5);
 				});
 			}).catch( (error) => {
 				expect(error).to.exist;
+				expect(error.message).to.equal('Error');
+				return locker.lock('key', { maxWaitTime: 0 }).then( (rwlock) => {
+					writeLocker = rwlock;
+					expect(rwlock).to.exist;
+					expect(rwlock.isLocked).to.equal(true);
+					return writeLocker.release();
+				}).then( () => {
+					expect(writeLocker.isLocked).to.equal(false);
+				}).catch( (error) => {
+					if (writeLocker) {
+						return writeLocker.release().then( () => {
+							throw error;
+						});
+					} else {
+						throw error;
+					}
+				});
 			});
 		});
 
 		it('should lock a write, run the function that errors and still release the key', () => {
-			return locker.writeLockWrap('key', () => {
+			let writeLocker;
+			return locker.writeLockWrap('key', { maxWaitTime: 0 }, () => {
 				throw new Error('Oh! No!');
 			}).catch( (error) => {
 				expect(error).to.exist;
 				expect(error.message).to.equal('Oh! No!');
+				return locker.lock('key', { maxWaitTime: 0 }).then( (rwlock) => {
+					writeLocker = rwlock;
+					expect(rwlock).to.exist;
+					expect(rwlock.isLocked).to.equal(true);
+					return writeLocker.release();
+				}).then( () => {
+					expect(writeLocker.isLocked).to.equal(false);
+				}).catch( (error) => {
+					if (writeLocker) {
+						return writeLocker.release().then( () => {
+							throw error;
+						});
+					} else {
+						throw error;
+					}
+				});
 			});
 		});
 	});
@@ -322,27 +478,37 @@ describe('Class LockerSet', () => {
 	});
 
 	describe('Read Lockers', () => {
-		it('should add a locker to set after it\'s been created', function() {
-			this.timeout(5000);
+		let mockUpgrade;
+
+		afterEach( (done) => {
+			if (mockUpgrade) {
+				mockUpgrade.restore();
+				done();
+			} else {
+				done();
+			}
+		});
+		it('should add a locker to set after it\'s been created', () => {
 			let readLock;
-			return locker.readLock('setKey').then( (rwlock) => {
+			return locker.readLock('key').then( (rwlock) => {
 				readLock = rwlock;
 				lockSet.addLock(rwlock);
 				expect(lockSet.locks.length).to.equal(1);
 				expect(lockSet.locks[0].keys.length).to.equal(1);
-				expect(lockSet.locks[0].keys[0]).to.equal('setKey');
+				expect(lockSet.locks[0].keys[0]).to.equal('key');
 				expect(lockSet.locks[0].isWriteLock).to.equal(false);
 				expect(lockSet.locks[0].isLocked).to.equal(true);
 				return lockSet.release();
 			}).then( () => {
-				expect(lockSet.locks[0].isLocked).to.equal(false);
+				expect(lockSet.locks.length).to.equal(0);
 			}).catch( (error) => {
+				console.log(error);
 				if (lockSet.locks.length) {
-					lockSet.release().then( () => {
+					return lockSet.release().then( () => {
 						throw error;
 					});
 				} else if (readLock && readLock.isLocked) {
-					readLock.release().then( () => {
+					return readLock.release().then( () => {
 						throw error;
 					});
 				} else {
@@ -351,30 +517,24 @@ describe('Class LockerSet', () => {
 			});
 		});
 
-		it('should create a locker and add it to the set automatically', function() {
-			this.timeout(5000);
-			return lockSet.readLock('setKey2').then( () => {
+		it('should create a locker and add it to the set automatically', () => {
+			return lockSet.readLock('key').then( () => {
 				expect(lockSet.locks.length).to.equal(1);
 				expect(lockSet.locks[0].keys.length).to.equal(1);
-				expect(lockSet.locks[0].keys[0]).to.equal('setKey2');
+				expect(lockSet.locks[0].keys[0]).to.equal('key');
 				expect(lockSet.locks[0].isWriteLock).to.equal(false);
 				expect(lockSet.locks[0].isLocked).to.equal(true);
 				return lockSet.release();
 			}).then( () => {
-				expect(lockSet.locks[0].isLocked).to.equal(false);
+				expect(lockSet.locks.length).to.equal(0);
 			}).catch( (error) => {
-				if (lockSet.locks.length) {
-					lockSet.release().then( () => {
-						throw error;
-					});
-				} else {
+				return lockSet.release().then( () => {
 					throw error;
-				}
+				});
 			});
 		});
 
-		it('should create a readLock set and upgrade them all to write lock sets and release them', function() {
-			this.timeout(5000);
+		it('should create a readLock set and upgrade them all to write lock sets and release them', () => {
 			return lockSet.readLock([ 'key', 'key1', 'key2' ]).then( () => {
 				expect(lockSet.locks[0].keys.length).to.equal(3);
 				expect(lockSet.locks[0].isWriteLock).to.equal(false);
@@ -389,41 +549,103 @@ describe('Class LockerSet', () => {
 				expect(lockSet.locks[0].isLocked).to.equal(true);
 				return lockSet.release();
 			}).then( () => {
-				expect(lockSet.locks[0].isLocked).to.equal(false);
+				expect(lockSet.locks.length).to.equal(0);
 			}).catch( (error) => {
-				if (lockSet.locks.length) {
-					lockSet.release().then( () => {
-						throw error;
-					});
-				} else {
+				return lockSet.release().then( () => {
 					throw error;
-				}
+				});
+			});
+		});
+
+		it('should create a readlock set and throw an error when the first error occurs', () => {
+			return lockSet.readLock([ 'key', 'key1', 'key2' ]).then( () => {
+				expect(lockSet.locks[0]).to.exist;
+				mockUpgrade = sinon.mock(lockSet.locks[0]);
+				mockUpgrade.expects('upgrade').once().throws(new Error('Error'));
+				return lockSet.upgrade({ onError: 'stop' });
+			}).then( () => {
+				throw new Error('Upgrade should have errored');
+			}).catch( (error) => {
+				expect(error).to.exist;
+				expect(error.message).to.equal('Error');
+				expect(lockSet.locks[0].isLocked).to.equal(true);
+				expect(lockSet.locks.length).to.equal(1);
+				mockUpgrade.verify();
+				return lockSet.release();
+			}).then( () => {
+				expect(lockSet.locks.length).to.equal(0);
+			}).catch( (error) => {
+				return lockSet.release().then( () => {
+					throw error;
+				});
+			});
+		});
+
+		it('should create a readlock set and release them all when one fails to upgrade', () => {
+			return lockSet.readLock([ 'key', 'key1', 'key2' ]).then( () => {
+				expect(lockSet.locks[0]).to.exist;
+				mockUpgrade = sinon.mock(lockSet.locks[0]);
+				mockUpgrade.expects('upgrade').once().throws(new Error('Error'));
+				return lockSet.upgrade({ onError: 'release' });
+			}).then( () => {
+				throw new Error('Upgrade should have errored');
+			}).catch( (error) => {
+				expect(error).to.exist;
+				expect(error.message).to.equal('Error');
+				mockUpgrade.verify();
+				expect(lockSet.locks.length).to.equal(0);
+			}).catch( (error) => {
+				return lockSet.release().then( () => {
+					throw error;
+				});
+			});
+		});
+
+		it('should create a readlock set and return all the reads that could not be upgraded', () => {
+			return lockSet.readLock([ 'key', 'key1', 'key2' ]).then( () => {
+				expect(lockSet.locks[0]).to.exist;
+				mockUpgrade = sinon.mock(lockSet.locks[0]);
+				mockUpgrade.expects('upgrade').once().throws(new Error('Error'));
+				return lockSet.upgrade({ onError: 'ignore' });
+			}).then( (upgradeFailures) => {
+				expect(upgradeFailures.length).to.equal(1);
+				expect(upgradeFailures[0].keys.length).to.equal(3);
+				expect(upgradeFailures[0].keys[0]).to.equal('key');
+				expect(upgradeFailures[0].keys[1]).to.equal('key1');
+				expect(upgradeFailures[0].keys[2]).to.equal('key2');
+				mockUpgrade.verify();
+				return lockSet.release();
+			}).then( () => {
+				expect(lockSet.locks.length).to.equal(0);
+			}).catch( (error) => {
+				return lockSet.release( () => {
+					throw error;
+				});
 			});
 		});
 	});
 
 	describe('Write Lockers', () => {
-		it('should add a locker to set after it\'s been created', function() {
-			this.timeout(5000);
+		it('should add a locker to set after it\'s been created', () => {
 			let writeLock;
-			return locker.writeLock('write-key-set').then( (rwlock) => {
+			return locker.writeLock('key').then( (rwlock) => {
 				writeLock = rwlock;
 				lockSet.addLock(rwlock);
 				expect(lockSet.locks.length).to.equal(1);
 				expect(lockSet.locks[0].keys.length).to.equal(1);
-				expect(lockSet.locks[0].keys[0]).to.equal('write-key-set');
+				expect(lockSet.locks[0].keys[0]).to.equal('key');
 				expect(lockSet.locks[0].isWriteLock).to.equal(true);
 				expect(lockSet.locks[0].isLocked).to.equal(true);
 				return lockSet.release();
 			}).then( () => {
-				expect(lockSet.locks[0].isLocked).to.equal(false);
+				expect(lockSet.locks.length).to.equal(0);
 			}).catch( (error) => {
 				if (lockSet.locks.length) {
-					lockSet.release().then( () => {
+					return lockSet.release().then( () => {
 						throw error;
 					});
 				} else if (writeLock && writeLock.isLocked) {
-					writeLock.release().then( () => {
+					return writeLock.release().then( () => {
 						throw error;
 					});
 				} else {
@@ -432,42 +654,36 @@ describe('Class LockerSet', () => {
 			});
 		});
 
-		it('should create a write lock and add it to the set', function() {
-			this.timeout(5000);
-			return lockSet.lock('write-key-set1').then( () => {
+		it('should create a write lock and add it to the set', () => {
+			return lockSet.lock('key').then( () => {
 				expect(lockSet.locks.length).to.equal(1);
 				expect(lockSet.locks[0].keys.length).to.equal(1);
-				expect(lockSet.locks[0].keys[0]).to.equal('write-key-set1');
+				expect(lockSet.locks[0].keys[0]).to.equal('key');
 				expect(lockSet.locks[0].isWriteLock).to.equal(true);
 				expect(lockSet.locks[0].isLocked).to.equal(true);
 				return lockSet.release();
 			}).then( () => {
-				expect(lockSet.locks[0].isLocked).to.equal(false);
+				expect(lockSet.locks.length).to.equal(0);
 			}).catch( (error) => {
-				if (lockSet.locks.length) {
-					lockSet.release().then( () => {
-						throw error;
-					});
-				} else {
+				return lockSet.release().then( () => {
 					throw error;
-				}
+				});
 			});
 		});
 	});
 
 	describe('Read And Write', () => {
 		it('should add reads and writes to the set' +
-			' upgrade all the reads to write, and release all of them', function() {
-				this.timeout(10000);
-				return lockSet.lock([ 'write1', 'write2' ]).then( () => {
+			' upgrade all the reads to write, and release all of them', () => {
+				return lockSet.lock([ 'key', 'key1' ]).then( () => {
 					expect(lockSet.locks.length).to.equal(1);
-					expect(lockSet.locks[0].keys[0]).to.equal('write1');
-					expect(lockSet.locks[0].keys[1]).to.equal('write2');
-					return lockSet.writeLock([ 'write3', 'write4' ]);
+					expect(lockSet.locks[0].keys[0]).to.equal('key');
+					expect(lockSet.locks[0].keys[1]).to.equal('key1');
+					return lockSet.writeLock([ 'key2', 'key3' ]);
 				}).then( () => {
 					expect(lockSet.locks.length).to.equal(2);
 					expect(lockSet.locks[1].keys.length).to.equal(2);
-					return lockSet.readLock([ 'read1', 'read2', 'read3' ]);
+					return lockSet.readLock([ 'key4', 'key5', 'key6' ]);
 				}).then( () => {
 					expect(lockSet.locks.length).to.equal(3);
 					expect(lockSet.locks[2].keys.length).to.equal(3);
@@ -477,31 +693,17 @@ describe('Class LockerSet', () => {
 					return lockSet.upgrade();
 				}).then( () => {
 					expect(lockSet.locks.length).to.equal(3);
-					expect(lockSet.locks[2].keys[0]).to.equal('read1');
-					expect(lockSet.locks[2].keys[1]).to.equal('read2');
-					expect(lockSet.locks[2].keys[2]).to.equal('read3');
+					expect(lockSet.locks[2].keys[0]).to.equal('key4');
+					expect(lockSet.locks[2].keys[1]).to.equal('key5');
+					expect(lockSet.locks[2].keys[2]).to.equal('key6');
 					expect(lockSet.locks[2].isWriteLock).to.equal(true);
 					return lockSet.release();
 				}).then( () => {
-					expect(lockSet.locks.length).to.equal(3);
-					expect(lockSet.locks[0].keys[0]).to.equal('write1');
-					expect(lockSet.locks[0].keys[1]).to.equal('write2');
-					expect(lockSet.locks[1].keys[0]).to.equal('write3');
-					expect(lockSet.locks[1].keys[1]).to.equal('write4');
-					expect(lockSet.locks[2].keys[0]).to.equal('read1');
-					expect(lockSet.locks[2].keys[1]).to.equal('read2');
-					expect(lockSet.locks[2].keys[2]).to.equal('read3');
-					expect(lockSet.locks[0].isLocked).to.equal(false);
-					expect(lockSet.locks[1].isLocked).to.equal(false);
-					expect(lockSet.locks[2].isLocked).to.equal(false);
+					expect(lockSet.locks.length).to.equal(0);
 				}).catch( (error) => {
-					if (lockSet.locks.length) {
-						lockSet.release().then( () => {
-							throw error;
-						});
-					} else {
+					return lockSet.release().then( () => {
 						throw error;
-					}
+					});
 				});
 			});
 	});

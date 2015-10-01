@@ -11,7 +11,10 @@ Has the following features:
 
 ## Basic Usage
 
-The example below shows how you can write lock a key, manipulate it, and then release it. The same is true for a read lock, just use the function `readLock`. 
+The example below shows how you can write lock a key, manipulate it, and then release it. The same is true for a read lock, just use the function `readLock`. The options are: 
+- maxWaitTime : This is the maxiumum amount of time in seconds to wait until the shard is unlocked. If it is set to 0, and the shard is not available it will return the error, otherwise it will keep trying until it locks or times out. This will default is 30 ceconds.
+- lockTimout : This is the length of time in seconds before the lock expries. The default for this is 60 seconds.
+
 ```js
 let Locker = require('rediz-locker');
 let Client = require('zs-rediz');
@@ -52,7 +55,10 @@ let redizClient = new Client(config);
 
 let locker = new Locker(redizClient);
 
-locker.readLockWrap('key', doSomethingCrazy()).then( (returnValue) => {
+locker.readLockWrap('key', () => {
+	// read stuff here
+	return returnValue;
+}).then( (returnValue) => {
 	...
 }).catch( (error) => {
 	...
