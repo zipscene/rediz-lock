@@ -697,5 +697,29 @@ describe('Class LockerSet', () => {
 				});
 			});
 	});
+
+	describe('Dependent lock sets', () => {
+		let redizClient, locker, lockSet;
+		beforeEach( (done) => {
+			redizClient = new RedizClient(REDIZ_CONFIG);
+			locker = new Locker(redizClient);
+			lockSet = locker.createLockSet();
+			done();
+		});
+		it('addDependentLockSet should function, and dependent sets should be cleared on release()', () => {
+			let childLockSet = locker.createLockSet();
+			return lockSet.lock('key1').then(() => {
+				return childLockSet.lock('key2');
+			}).then(() => {
+				lockSet.addDependentLockSet(childLockSet);
+				expect(lockSet._hasLocks()).to.equal(true);
+				expect(childLockSet._hasLocks()).to.equal(true);
+				return lockSet.release();
+			}).then(() => {
+				expect(lockSet._hasLocks()).to.equal(false);
+				expect(childLockSet._hasLocks()).to.equal(false);
+			});
+		});
+	});
 });
 
