@@ -34,7 +34,8 @@
     "mocha": "^2.3.3",
     "sinon": "^1.17.1",
     "source-map-support": "^0.3.2",
-    "yuidocjs": "^0.9.0"
+    "yuidocjs": "^0.9.0",
+    "zs-rediz": "^1.0.0"
   },
   "publishConfig": {
     "registry": "https://npm.zipscene.com/"
