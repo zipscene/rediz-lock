@@ -58,7 +58,7 @@ locker.readLock('key', { maxWaitTime: 30, lockTimeout: 60 }).then( (rwLock) => {
 
 ### Lock Wrapping
 
-This example shows you the `readLockWrap` and `writeLockWrap` functions. This allows you to run a function on key(s) and it releases them once the function is complete. It will return value from the function. Even if the function given returns or throws an error, the keys will be unlocked **before** returning.
+This example shows you the `readLockWrap` and `writeLockWrap` functions. This allows you to run a function on key and it releases them once the function is complete. It will return value from the function. Even if the function given returns or throws an error, the keys will be unlocked **before** returning.
 
 ```js
 let Locker = require('rediz-locker');
@@ -78,9 +78,12 @@ locker.readLockWrap('key', () => {
 ```
 
 ### Lock Sets
-This example shows how you can keep a set of locks. You can create a write or read lock directly on the set which will be added to the list of locks. When calling `lockSet.upgrade` or `lockSet.release`, all the locks will be upgraded or released in the inverese order they were originally locked. When a lock set is release all the locks are removed from the list of locks. When upgrading a lock set, only the read locks are released and then relocked as writes.
-
-For the `lockSet.upgrade` the options agrument is the same for the locker upgrade with one exceptions. The `options.onError`, can be set to `ignore`. Which will ignore all errors on upgrade, no matter at what step the upgrade is in. It will then return an array of all failed upgrades. Note: a failed upgrade would not include a lock that is already a write lock.
+This example uses `readLockSet` and `writeLockSet`, which will try to write lock or read lock multiple keys.
+They will either be added to a new lock set or to one givin. 
+In addition to the `readLock` and `writeLock` options, `lockSet` is another option which will add these new locks into the given lock set,
+and return the updated lock set. If a key you are trying to lock is already in the lock set it will skip it. 
+If an error occurs at any point, all locks that were attempting to be added to a given or new lock set will be released. 
+If your given lock set already has locks they will **not** be released.
 
 ```js
 let Locker = require('rediz-locker');
@@ -88,19 +91,15 @@ let Client = require('zs-rediz');
 let redizClient = new Client(config);
 
 let locker = new Locker(redizClient);
-let lockSet = locker.createLockSet();
 
-lockSet.writeLock(['key', 'key1' ]).then( () => {
-	return lockSet.readLock(['key2', 'key3']);
-}).then( () => {
-	return lockSet.upgrade({
-		maxWaitTime: 30,
-		lockTimeout: 60,
-		onError: 'ignore'
-	});
-}).then( (upgradeFailures) => {
-	if (upgradeFailures.length) {
-		// do something here
-	}
+return locker.readLockSet([ 'key', 'key1' ])
+.then( (lockSet) => {
+	return writeLockSet([ 'key2', 'key3' ], { lockSet });
+})
+.then( (lockSet) => {
+	....
+})
+.catch( (error) => {
+	...
 });
 ```
