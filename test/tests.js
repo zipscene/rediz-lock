@@ -262,7 +262,7 @@ describe('Class Locker', function() {
 				expect(lockSet._hasLocks()).to.be.true;
 			})
 			.then( () => {
-				return locker.readLockSet(['key', 'key1'], { lockSet });
+				return locker.readLockSet([ 'key', 'key1' ], { lockSet });
 			})
 			.then( () => {
 				expect(lockSet._hasLocks()).to.be.true;
@@ -316,7 +316,7 @@ describe('Class Locker', function() {
 			let lockSet;
 			let readLockMock = sinon.mock(locker);
 			readLockMock.expects('readLock').once().throws(new XError(XError.INTERNAL_ERROR));
-			return locker.readLockSet(['key', 'key1'])
+			return locker.readLockSet([ 'key', 'key1' ])
 			.then( (lockSet) => {
 				console.log(lockSet);
 				return lockSet.release();
@@ -329,7 +329,7 @@ describe('Class Locker', function() {
 				expect(error.code).to.equal(XError.INTERNAL_ERROR);
 				readLockMock.verify();
 				readLockMock.restore();
-				return locker.readLockSet(['key', 'key1'])
+				return locker.readLockSet([ 'key', 'key1' ])
 				.then( (set) => {
 					lockSet = set;
 					expect(set._hasLocks()).to.be.true;
@@ -345,7 +345,7 @@ describe('Class Locker', function() {
 					} else {
 						throw error;
 					}
-				})
+				});
 			});
 		});
 	});
@@ -505,7 +505,7 @@ describe('Class Locker', function() {
 				expect(lockSet._hasLocks()).to.be.true;
 			})
 			.then( () => {
-				return locker.writeLockSet(['key', 'key1'], { lockSet });
+				return locker.writeLockSet([ 'key', 'key1' ], { lockSet });
 			})
 			.then( () => {
 				expect(lockSet._hasLocks()).to.be.true;
@@ -559,7 +559,7 @@ describe('Class Locker', function() {
 			let lockSet;
 			let writeLockMock = sinon.mock(locker);
 			writeLockMock.expects('writeLock').once().throws(new XError(XError.INTERNAL_ERROR));
-			return locker.writeLockSet(['key', 'key1'])
+			return locker.writeLockSet([ 'key', 'key1' ])
 			.then( (lockSet) => {
 				return lockSet.release();
 			})
@@ -571,7 +571,7 @@ describe('Class Locker', function() {
 				expect(error.code).to.equal(XError.INTERNAL_ERROR);
 				writeLockMock.verify();
 				writeLockMock.restore();
-				return locker.writeLockSet(['key', 'key1'])
+				return locker.writeLockSet([ 'key', 'key1' ])
 				.then( (set) => {
 					lockSet = set;
 					expect(set._hasLocks()).to.be.true;
@@ -587,7 +587,7 @@ describe('Class Locker', function() {
 					} else {
 						throw error;
 					}
-				})
+				});
 			});
 		});
 	});
