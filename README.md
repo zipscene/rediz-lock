@@ -2,17 +2,15 @@
 
 Generates read or write lockers for a zs-rediz client.
 
-Has the following features: 
+Has the following features:
 
 - Ability to lock a key or multpile keys for read or write purposes
 - Store multiple locks and manipulate (upgrade, release) all at once
 - Wrapper function to manipulate a locker then release
 - Upgrade read locks to write locks
 
-## Basic Usage
-
-### Lock a Key
-The example below shows how you can write lock a key, manipulate it, and then release it. The same is true for a read lock, just use the function `readLock`. 
+## Lock a Key
+The example below shows how you can write lock a key, manipulate it, and then release it. The same is true for a read lock, just use the function `readLock`.
 readLock || writeLock options:
 - maxWaitTime : This is the maxiumum amount of time in seconds to wait until the shard is unlocked. If it is set to 0, and the shard is not available it will return the error, otherwise it will keep trying until it locks or times out. This will default is 30 ceconds.
 - lockTimout : This is the length of time in seconds before the lock expries. The default for this is 60 seconds.
@@ -31,7 +29,7 @@ locker.writeLock('key', { maxWaitTime: 30, lockTimeout: 60 }).then( (rwLock) => 
 });
 ```
 
-### Lock Upgrade
+## Lock Upgrade
 The example below shows how to easily turn a read lock into a write lock. It will unlock each key and then relock them with write keys.
 Upgrade Options:
 - maxWaitTime : This is the maxiumum amount of time in seconds to wait until the write shard is unlocked. If it is set to 0, and the shard is not available it will return the error, otherwise it will keep trying until it locks or times out. This will default is 30 ceconds.
@@ -56,7 +54,7 @@ locker.readLock('key', { maxWaitTime: 30, lockTimeout: 60 }).then( (rwLock) => {
 });
 ```
 
-### Lock Wrapping
+## Lock Wrapping
 
 This example shows you the `readLockWrap` and `writeLockWrap` functions. This allows you to run a function on key and it releases them once the function is complete. It will return value from the function. Even if the function given returns or throws an error, the keys will be unlocked **before** returning.
 
@@ -77,29 +75,57 @@ locker.readLockWrap('key', () => {
 });
 ```
 
-### Lock Sets
-This example uses `readLockSet` and `writeLockSet`, which will try to write lock or read lock multiple keys.
-They will either be added to a new lock set or to one givin. 
-In addition to the `readLock` and `writeLock` options, `lockSet` is another option which will add these new locks into the given lock set,
-and return the updated lock set. If a key you are trying to lock is already in the lock set it will skip it. 
-If an error occurs at any point, all locks that were attempting to be added to a given or new lock set will be released. 
-If your given lock set already has locks they will **not** be released.
+## Lock Sets
+
+Rediz-Lock also provides a LockSet class that manages a set of locks together.
+
+### Creating
+
+To create an empty lock set:
 
 ```js
-let Locker = require('rediz-locker');
-let Client = require('zs-rediz');
-let redizClient = new Client(config);
+let lockSet = locker.createLockSet();
+```
 
-let locker = new Locker(redizClient);
+Or, to create a lock set that already has keys locked:
 
-return locker.readLockSet([ 'key', 'key1' ])
-.then( (lockSet) => {
-	return writeLockSet([ 'key2', 'key3' ], { lockSet });
-})
-.then( (lockSet) => {
-	....
-})
-.catch( (error) => {
-	...
-});
+```js
+let lockSet = locker.readLockSet([ 'key1', 'key2' ]);
+let otherLockSet = locker.writeLockSet([ 'key1', 'key2' ]);
+```
+
+Note that, although these examples use a LockSet with only read locks or only write locks,
+LockSets can contain mixed read/write locks.
+
+### Adding Locks
+
+Use methods on the LockSet to add new locks.  The available methods are the same as those on
+`Locker`:
+
+- readLock()
+- writeLock()
+- readLockWrap()
+- writeLockWrap()
+
+Locks returned from these methods can be individually released, upgraded, and managed if needed.
+
+### Reference Counting
+
+If a LockSet is requested to lock the same key twice, it will return the same lock object and
+increment a reference counter.  So, if the key `key1` is locked twice, you will need to call
+`release()` twice to actually release the lock.
+
+### Releasing & Upgrading
+
+The LockSet also has methods to release or upgrade the whole LockSet at once:
+
+```js
+// Releases all locks in the set
+lockSet.release()
+
+// Upgrades all locks in the set
+lockSet.upgrade()
+
+// Releases all locks even if they have nonzero reference counts
+lockSet.forceRelease()
 ```
