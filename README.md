@@ -129,3 +129,19 @@ lockSet.upgrade()
 // Releases all locks even if they have nonzero reference counts
 lockSet.forceRelease()
 ```
+
+### Dependent LockSets
+
+You can also add a whole LockSet to another LockSet as a dependency.  This allows you to refer to
+nested sets of locks.
+
+```js
+// Create an empty dependent lock set
+let lockSet = locker.createLockSet();
+let dependentLockSet = lockSet.createLockSet();
+dependentLockSet.writeLock(...);
+
+// Create dependent lock sets with keys already locked
+lockSet.readLockSet([ 'key1', 'key2', ... ]) // -> LockSet
+lockSet.writeLockSet([ 'key1', 'key2', ... ]) // -> LockSet
+```
