@@ -923,12 +923,14 @@ describe('Class LockSet', function() {
 
 	describe('Dependent lock sets', function() {
 		let redizClient, locker, lockSet;
+
 		beforeEach( function(done) {
 			redizClient = new RedizClient(REDIZ_CONFIG);
 			locker = new Locker(redizClient);
 			lockSet = locker.createLockSet();
 			done();
 		});
+
 		it('addDependentLockSet should function, and dependent sets should be cleared on release()', function() {
 			let childLockSet = locker.createLockSet();
 			return locker.lock('key1').then((writeLock) => {
@@ -945,6 +947,128 @@ describe('Class LockSet', function() {
 				expect(childLockSet._hasLocks()).to.equal(false);
 			});
 		});
+	});
+
+	describe('Convenience methods', function() {
+
+		let redizClient, locker, lockSet;
+
+		beforeEach( function(done) {
+			redizClient = new RedizClient(REDIZ_CONFIG);
+			locker = new Locker(redizClient);
+			lockSet = locker.createLockSet();
+			done();
+		});
+
+		it('#writeLock', function() {
+			return lockSet.writeLock('key1')
+				.then((lock) => {
+					expect(lock.isLocked).to.equal(true);
+					expect(lock.isWriteLock).to.equal(true);
+					return lock.release();
+				});
+		});
+
+		it('#readLock', function() {
+			return lockSet.readLock('key1')
+				.then((lock) => {
+					expect(lock.isLocked).to.equal(true);
+					expect(lock.isWriteLock).to.equal(false);
+					return lock.release();
+				});
+		});
+
+		it('#readLockWrap', function() {
+			let lock;
+			return lockSet.readLockWrap('key1', (_lock) => {
+				lock = _lock;
+				expect(lock.isLocked).to.equal(true);
+			})
+				.then(() => {
+					expect(lock.isLocked).to.equal(false);
+				});
+		});
+
+	});
+
+	describe('Relocking', function() {
+		let redizClient, locker, lockSet;
+
+		beforeEach( function(done) {
+			redizClient = new RedizClient(REDIZ_CONFIG);
+			locker = new Locker(redizClient);
+			lockSet = locker.createLockSet();
+			done();
+		});
+
+		it('should allow relocking a lock', function() {
+			let lock;
+			return lockSet.writeLock('key1')
+				.then((_lock) => {
+					lock = _lock;
+					expect(lock.isLocked).to.equal(true);
+					expect(lock.referenceCount).to.equal(1);
+					return lockSet.writeLock('key1');
+				})
+				.then((_lock2) => {
+					expect(_lock2).to.equal(lock);
+					expect(lock.referenceCount).to.equal(2);
+					expect(lock.isLocked).to.equal(true);
+					return lock.release();
+				})
+				.then(() => {
+					expect(lock.isLocked).to.equal(true);
+					expect(lock.referenceCount).to.equal(1);
+					return lock.release();
+				})
+				.then(() => {
+					expect(lock.isLocked).to.equal(false);
+					expect(lock.referenceCount).to.equal(0);
+				});
+		});
+
+		it('should allow force releasing locks', function() {
+			let lock;
+			return lockSet.writeLock('key1')
+				.then((_lock) => {
+					lock = _lock;
+					expect(lock.isLocked).to.equal(true);
+					expect(lock.referenceCount).to.equal(1);
+					return lockSet.writeLock('key1');
+				})
+				.then((_lock2) => {
+					expect(_lock2).to.equal(lock);
+					expect(lock.referenceCount).to.equal(2);
+					expect(lock.isLocked).to.equal(true);
+					return lock.forceRelease();
+				})
+				.then(() => {
+					expect(lock.isLocked).to.equal(false);
+				});
+		});
+
+		it('should automatically upgrade read locks', function() {
+			let lock;
+			return lockSet.readLock('key1')
+				.then((_lock) => {
+					lock = _lock;
+					expect(lock.isLocked).to.equal(true);
+					expect(lock.referenceCount).to.equal(1);
+					expect(lock.isWriteLock).to.equal(false);
+					return lockSet.writeLock('key1');
+				})
+				.then((_lock2) => {
+					expect(_lock2).to.equal(lock);
+					expect(lock.referenceCount).to.equal(2);
+					expect(lock.isLocked).to.equal(true);
+					expect(lock.isWriteLock).to.equal(true);
+					return lock.forceRelease();
+				})
+				.then(() => {
+					expect(lock.isLocked).to.equal(false);
+				});
+		});
+
 	});
 });
 
