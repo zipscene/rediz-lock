@@ -752,7 +752,7 @@ describe('Class Locker', function() {
 
 });
 
-describe('Class LockerSet', function() {
+describe('Class LockSet', function() {
 	let redizClient, locker, lockSet;
 
 	beforeEach( function(done) {
