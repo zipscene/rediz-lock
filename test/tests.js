@@ -867,58 +867,58 @@ describe('Class LockSet', function() {
 
 	describe('Read And Write', function() {
 		it('should add reads and writes to the set' +
-			' upgrade all the reads to write, and release all of them', function() {
-				let writeLock, writeLock1, readLock, lock, lock1, lock2;
-				return locker.lock('key').then( (_writeLock) => {
-					writeLock = _writeLock;
-					lockSet.addLock(_writeLock);
-					expect(lockSet._hasLocks()).to.be.true;
-					return locker.writeLock('key1');
-				}).then( (_writeLock) => {
-					writeLock1 = _writeLock;
-					lockSet.addLock(_writeLock);
-					expect(lockSet._hasLocks()).to.be.true;
-					return locker.readLock('key2');
-				}).then( (_readLock) => {
-					readLock = _readLock;
-					lockSet.addLock(_readLock);
-					expect(lockSet._hasLocks()).to.be.true;
-					lock = lockSet.getLock('key');
-					lock1 = lockSet.getLock('key1');
-					lock2 = lockSet.getLock('key2');
-					expect(lock.isWriteLock).to.be.true;
-					expect(lock1.isWriteLock).to.be.true;
-					expect(lock2.isWriteLock).to.be.false;
-					return lockSet.upgrade();
-				}).then( () => {
-					expect(lockSet._hasLocks()).to.be.true;
-					expect(lock2.isWriteLock).to.be.true;
-					expect(lock2.isLocked).to.be.true;
-					return lockSet.release();
-				}).then( () => {
-					expect(lockSet._hasLocks()).to.be.false;
-				}).catch( (error) => {
-					return lockSet.release()
-					.then( () => {
-						if (writeLock) {
-							return writeLock.release();
-						}
-					})
-					.then( () => {
-						if (writeLock1) {
-							return writeLock1.release();
-						}
-					})
-					.then( () => {
-						if (readLock) {
-							return readLock.release();
-						}
-					})
-					.then( () => {
-						throw error;
-					});
+		' upgrade all the reads to write, and release all of them', function() {
+			let writeLock, writeLock1, readLock, lock, lock1, lock2;
+			return locker.lock('key').then( (_writeLock) => {
+				writeLock = _writeLock;
+				lockSet.addLock(_writeLock);
+				expect(lockSet._hasLocks()).to.be.true;
+				return locker.writeLock('key1');
+			}).then( (_writeLock) => {
+				writeLock1 = _writeLock;
+				lockSet.addLock(_writeLock);
+				expect(lockSet._hasLocks()).to.be.true;
+				return locker.readLock('key2');
+			}).then( (_readLock) => {
+				readLock = _readLock;
+				lockSet.addLock(_readLock);
+				expect(lockSet._hasLocks()).to.be.true;
+				lock = lockSet.getLock('key');
+				lock1 = lockSet.getLock('key1');
+				lock2 = lockSet.getLock('key2');
+				expect(lock.isWriteLock).to.be.true;
+				expect(lock1.isWriteLock).to.be.true;
+				expect(lock2.isWriteLock).to.be.false;
+				return lockSet.upgrade();
+			}).then( () => {
+				expect(lockSet._hasLocks()).to.be.true;
+				expect(lock2.isWriteLock).to.be.true;
+				expect(lock2.isLocked).to.be.true;
+				return lockSet.release();
+			}).then( () => {
+				expect(lockSet._hasLocks()).to.be.false;
+			}).catch( (error) => {
+				return lockSet.release()
+				.then( () => {
+					if (writeLock) {
+						return writeLock.release();
+					}
+				})
+				.then( () => {
+					if (writeLock1) {
+						return writeLock1.release();
+					}
+				})
+				.then( () => {
+					if (readLock) {
+						return readLock.release();
+					}
+				})
+				.then( () => {
+					throw error;
 				});
 			});
+		});
 	});
 
 	describe('Dependent lock sets', function() {
