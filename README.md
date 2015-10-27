@@ -14,14 +14,15 @@ The example below shows how you can write lock a key, manipulate it, and then re
 readLock || writeLock options:
 - maxWaitTime : This is the maxiumum amount of time in seconds to wait until the shard is unlocked. If it is set to 0, and the shard is not available it will return the error, otherwise it will keep trying until it locks or times out. This will default is 30 ceconds.
 - lockTimout : This is the length of time in seconds before the lock expries. The default for this is 60 seconds.
-- resolveConflicts : This option can only be supplied to `writeLock()`.  If this is set to true, the following 
+- resolveConflicts : __This option can only be supplied to `writeLock()`.__  If this is set to true, the following 
 behavior is enabled: If we attempt to acquire a write lock, but the write lock is
 already held by another process, we either immediately fail with a RESOURCE_LOCKED error
 or we wait for the lock, depending on a conflict resolution process.  The "winner" of
 the conflict resolution (the process that continues to wait for the lock) is randomly
 chosen (but the same "winner" will be chosen by both).  Note that the process that
 already holds the lock will continue to hold it, even if it loses conflict resolution.
-It is allowed to run to completion and release the lock.
+It is allowed to run to completion and release the lock.  Essentially, if this is set to
+true, it sometimes acts like `maxWaitTime` is set to 0 (essentially, randomly).
 
 ```js
 let Locker = require('rediz-locker');

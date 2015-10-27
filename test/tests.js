@@ -438,13 +438,14 @@ describe('Class Locker', function() {
 			locker1.tokenBase = 'a';
 			let locker2 = new Locker(redizClient);
 			locker2.tokenBase = 'b';
-			let lock1;
+			let lock1, lock2;
 			return locker1.writeLock('foo', { resolveConflicts: true })
 				.then((_lock1) => {
 					lock1 = _lock1;
 					return locker2.writeLock('foo', { resolveConflicts: true });
 				})
-				.then(() => {
+				.then((_lock2) => {
+					lock2 = _lock2;
 					throw new Error('Unexpected success acquiring lock');
 				}, (err) => {
 					expect(err).to.be.an.instanceof(XError);
@@ -452,7 +453,12 @@ describe('Class Locker', function() {
 					expect(err.message).to.match(/conflict resolution/);
 				})
 				.then(() => {
-					return lock1.release();
+					if (lock1) lock1.release();
+					if (lock2) lock2.release();
+				}, (err) => {
+					if (lock1) lock1.release();
+					if (lock2) lock2.release();
+					throw err;
 				});
 		});
 
@@ -462,7 +468,7 @@ describe('Class Locker', function() {
 			locker1.tokenBase = 'a';
 			let locker2 = new Locker(redizClient);
 			locker2.tokenBase = 'b';
-			let lock1;
+			let lock1, lock2;
 			return locker2.writeLock('foo', { resolveConflicts: true })
 				.then((_lock1) => {
 					lock1 = _lock1;
@@ -472,7 +478,15 @@ describe('Class Locker', function() {
 					return locker1.writeLock('foo', { resolveConflicts: true });
 				})
 				.then((_lock2) => {
-					return _lock2.release();
+					lock2 = _lock2;
+				})
+				.then(() => {
+					if (lock1) lock1.release();
+					if (lock2) lock2.release();
+				}, (err) => {
+					if (lock1) lock1.release();
+					if (lock2) lock2.release();
+					throw err;
 				});
 		});
 	});
