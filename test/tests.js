@@ -431,6 +431,50 @@ describe('Class Locker', function() {
 				});
 			});
 		});
+
+		it('should perform conflict resolution 1', function() {
+			this.timeout(5000);
+			let locker1 = new Locker(redizClient);
+			locker1.tokenBase = 'a';
+			let locker2 = new Locker(redizClient);
+			locker2.tokenBase = 'b';
+			let lock1;
+			return locker1.writeLock('foo', { resolveConflicts: true })
+				.then((_lock1) => {
+					lock1 = _lock1;
+					return locker2.writeLock('foo', { resolveConflicts: true });
+				})
+				.then(() => {
+					throw new Error('Unexpected success acquiring lock');
+				}, (err) => {
+					expect(err).to.be.an.instanceof(XError);
+					expect(err.code).to.equal(XError.RESOURCE_LOCKED);
+					expect(err.message).to.match(/conflict resolution/);
+				})
+				.then(() => {
+					return lock1.release();
+				});
+		});
+
+		it('should perform conflict resolution 2', function() {
+			this.timeout(5000);
+			let locker1 = new Locker(redizClient);
+			locker1.tokenBase = 'a';
+			let locker2 = new Locker(redizClient);
+			locker2.tokenBase = 'b';
+			let lock1;
+			return locker2.writeLock('foo', { resolveConflicts: true })
+				.then((_lock1) => {
+					lock1 = _lock1;
+					setTimeout(() => {
+						lock1.release();
+					}, 500);
+					return locker1.writeLock('foo', { resolveConflicts: true });
+				})
+				.then((_lock2) => {
+					return _lock2.release();
+				});
+		});
 	});
 
 	describe('#writeLockSet', function() {
