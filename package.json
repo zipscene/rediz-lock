@@ -19,7 +19,8 @@
     "lodash": "^3.10.1",
     "node-uuid": "^1.4.3",
     "pasync": "^1.4.0",
-    "xerror": "^1.0.0"
+    "xerror": "^1.0.0",
+    "zs-simple-profiler": "^1.2.4"
   },
   "devDependencies": {
     "broccoli": "^0.16.8",
