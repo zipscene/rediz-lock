@@ -1,6 +1,6 @@
 {
   "name": "zs-rediz-lock",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "Locking library for rediz",
   "main": "./dist/lib/index.js",
   "repository": {
@@ -20,7 +20,7 @@
     "node-uuid": "^1.4.3",
     "pasync": "^1.4.0",
     "xerror": "^1.0.0",
-    "zs-simple-profiler": "^1.2.4"
+    "zs-simple-profiler": "^1.2.5"
   },
   "devDependencies": {
     "broccoli": "^0.16.8",
