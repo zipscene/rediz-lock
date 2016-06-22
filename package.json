@@ -1,6 +1,6 @@
 {
   "name": "zs-rediz-lock",
-  "version": "1.2.4",
+  "version": "1.2.5",
   "description": "Locking library for rediz",
   "main": "./dist/lib/index.js",
   "repository": {
