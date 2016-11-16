@@ -1,12 +1,17 @@
 {
-  "name": "zs-rediz-lock",
+  "name": "rediz-lock",
   "version": "1.3.0",
-  "description": "Locking library for rediz",
+  "description": "Fast and flexible redis locks",
   "main": "./dist/lib/index.js",
   "repository": {
     "type": "git",
-    "url": "git@git.zipscene.com:zsapilibs/zs-rediz-lock.git"
+    "url": "https://github.com/zipscene/rediz-lock.git"
   },
+  "keywords": [
+    "redis",
+    "rediz",
+    "lock"
+  ],
   "scripts": {
     "lint": "node ./node_modules/.bin/eslint . || exit 0",
     "docs": "node ./node_modules/.bin/yuidoc .",
@@ -20,7 +25,7 @@
     "node-uuid": "^1.4.3",
     "pasync": "^1.4.0",
     "xerror": "^1.0.0",
-    "zs-simple-profiler": "^1.2.5"
+    "simprof": "^1.2.5"
   },
   "devDependencies": {
     "broccoli": "^0.16.8",
@@ -36,9 +41,7 @@
     "sinon": "^1.17.1",
     "source-map-support": "^0.3.2",
     "yuidocjs": "^0.9.0",
-    "zs-rediz": "^1.0.0"
+    "rediz": "^1.0.0"
   },
-  "publishConfig": {
-    "registry": "https://npm.zipscene.com/"
-  }
+  "license": "Apache-2.0"
 }

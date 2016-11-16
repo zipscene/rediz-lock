@@ -1,6 +1,6 @@
-# zs-rediz-lock
+# rediz-lock
 
-Generates read or write lockers for a zs-rediz client.
+Generates read or write lockers for a rediz client.
 
 Has the following features:
 
@@ -26,7 +26,7 @@ true, it sometimes acts like `maxWaitTime` is set to 0 (essentially, randomly).
 
 ```js
 let Locker = require('rediz-locker');
-let Client = require('zs-rediz');
+let Client = require('rediz');
 let redizClient = new Client(config);
 
 let locker = new Locker(redizClient);
@@ -47,7 +47,7 @@ Upgrade Options:
 
 ```js
 let Locker = require('rediz-locker');
-let Client = require('zs-rediz');
+let Client = require('rediz');
 let redizClient = new Client(config);
 
 let locker = new Locker(redizClient);
@@ -69,7 +69,7 @@ This example shows you the `readLockWrap` and `writeLockWrap` functions. This al
 
 ```js
 let Locker = require('rediz-locker');
-let Client = require('zs-rediz');
+let Client = require('rediz');
 let redizClient = new Client(config);
 
 let locker = new Locker(redizClient);
