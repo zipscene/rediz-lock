@@ -9,10 +9,11 @@ const RedizClient = require('rediz');
 const LockSet = require('../lib/lock-set');
 const RWLock = require('../lib/rwlock');
 const XError = require('xerror');
+const pasync = require('pasync');
 const REDIZ_CONFIG = {
 	host: 'localhost',
 	port: '6379',
-	volatileCluster: true
+	volatileCluster: false
 };
 
 describe('Class Locker', function() {
@@ -192,6 +193,32 @@ describe('Class Locker', function() {
 				}
 			});
 		});
+
+		it('should send read lock heartbeats', function() {
+			this.timeout(10000);
+			let rwlock;
+			return locker.readLock('key', { maxWaitTime: 1, lockTimeout: 1 })
+				.then((_rwlock) => {
+					rwlock = _rwlock;
+					return pasync.setTimeout(2000);
+				})
+				.then(() => {
+					let otherLocker = new Locker(redizClient);
+					return otherLocker.writeLock('key', { maxWaitTime: 1 })
+						.then(() => {
+							throw new Error('Expected lock to fail');
+						}, () => {
+							// Expected error, do not throw
+						});
+				})
+				.then(() => rwlock.release())
+				.then(() => {
+					let otherLocker = new Locker(redizClient);
+					return otherLocker.writeLock('key', { maxWaitTime: 1 });
+				})
+				.then((rwlock) => rwlock.release());
+		});
+
 	});
 
 	describe('#readLockSet', function() {
@@ -523,6 +550,32 @@ describe('Class Locker', function() {
 					throw err;
 				});
 		});
+
+		it('should send write lock heartbeats', function() {
+			this.timeout(10000);
+			let rwlock;
+			return locker.writeLock('key', { maxWaitTime: 1, lockTimeout: 1 })
+				.then((_rwlock) => {
+					rwlock = _rwlock;
+					return pasync.setTimeout(2000);
+				})
+				.then(() => {
+					let otherLocker = new Locker(redizClient);
+					return otherLocker.writeLock('key', { maxWaitTime: 1 })
+						.then(() => {
+							throw new Error('Expected lock to fail');
+						}, () => {
+							// Expected error, do not throw
+						});
+				})
+				.then(() => rwlock.release())
+				.then(() => {
+					let otherLocker = new Locker(redizClient);
+					return otherLocker.writeLock('key', { maxWaitTime: 1 });
+				})
+				.then((rwlock) => rwlock.release());
+		});
+
 	});
 
 	describe('#writeLockSet', function() {
