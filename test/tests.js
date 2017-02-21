@@ -207,8 +207,8 @@ describe('Class Locker', function() {
 					return otherLocker.writeLock('key', { maxWaitTime: 1 })
 						.then(() => {
 							throw new Error('Expected lock to fail');
-						}, () => {
-							// Expected error, do not throw
+						}, (err) => {
+							expect(err.message).to.contain('Timed out');
 						});
 				})
 				.then(() => rwlock.release())
@@ -564,8 +564,8 @@ describe('Class Locker', function() {
 					return otherLocker.writeLock('key', { maxWaitTime: 1 })
 						.then(() => {
 							throw new Error('Expected lock to fail');
-						}, () => {
-							// Expected error, do not throw
+						}, (err) => {
+							expect(err.message).to.contain('Timed out');
 						});
 				})
 				.then(() => rwlock.release())
