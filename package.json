@@ -23,6 +23,7 @@
     "babel-runtime": "5.8.24",
     "lodash": "^3.10.1",
     "node-uuid": "^1.4.3",
+    "objtools": "^1.6.3",
     "pasync": "^1.4.1",
     "simprof": "^1.2.5",
     "xerror": "^1.0.0"
