@@ -1,6 +1,6 @@
 {
   "name": "rediz-lock",
-  "version": "1.4.2",
+  "version": "1.4.3",
   "description": "Fast and flexible redis locks",
   "main": "./dist/lib/index.js",
   "repository": {
