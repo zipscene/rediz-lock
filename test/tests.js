@@ -224,123 +224,122 @@ describe('Class Locker', function() {
 	describe('#readLockSet', function() {
 		it('should reject with an error if keys is not an array', function() {
 			return locker.readLockSet('key')
-			.catch( (error) => {
-				expect(error).to.exist;
-				expect(error).to.be.an.instanceof(XError);
-				expect(error.code).to.equal(XError.INVALID_ARGUMENT);
-				expect(error.message).to.equal('keys must be an array');
-			});
+				.catch( (error) => {
+					expect(error).to.exist;
+					expect(error).to.be.an.instanceof(XError);
+					expect(error.code).to.equal(XError.INVALID_ARGUMENT);
+					expect(error.message).to.equal('keys must be an array');
+				});
 		});
 
 		it('should return a new lock set with the read locks', function() {
 			let returnedLockSet;
 			return locker.readLockSet([ 'key', 'key1' ], { maxWaitTime: 0 })
-			.then( (newLockSet) => {
-				returnedLockSet = newLockSet;
-				expect(newLockSet.locks.key).to.exist;
-				expect(newLockSet.locks.key.key).to.equal('key');
-				expect(newLockSet.locks.key.isWriteLock).to.be.false;
-				expect(newLockSet.locks.key1).to.exist;
-				expect(newLockSet.locks.key1.key).to.equal('key1');
-				expect(newLockSet.locks.key1.isWriteLock).to.be.false;
-				return newLockSet.release();
-			})
-			.then( () => {
-				expect(returnedLockSet._hasLocks()).to.be.false;
-			})
-			.catch( (error) => {
-				if (returnedLockSet) {
-					return returnedLockSet.release().then( () => { throw error; });
-				} else {
-					throw error;
-				}
-			});
+				.then( (newLockSet) => {
+					returnedLockSet = newLockSet;
+					expect(newLockSet.locks.key).to.exist;
+					expect(newLockSet.locks.key.key).to.equal('key');
+					expect(newLockSet.locks.key.isWriteLock).to.be.false;
+					expect(newLockSet.locks.key1).to.exist;
+					expect(newLockSet.locks.key1.key).to.equal('key1');
+					expect(newLockSet.locks.key1.isWriteLock).to.be.false;
+					return newLockSet.release();
+				})
+				.then( () => {
+					expect(returnedLockSet._hasLocks()).to.be.false;
+				})
+				.catch( (error) => {
+					if (returnedLockSet) {
+						return returnedLockSet.release().then( () => { throw error; });
+					} else {
+						throw error;
+					}
+				});
 		});
 
 		it('should return a lock set with one lock when trying to lock the same key', function() {
 			let returnedLockSet;
 			return locker.readLockSet([ 'key', 'key' ], { maxWaitTime: 0 })
-			.then( (newLockSet) => {
-				returnedLockSet = newLockSet;
-				expect(newLockSet._hasLocks()).to.be.true;
-				expect(Object.keys(newLockSet.locks).length).to.equal(1);
-				let lock = newLockSet.getLock('key');
-				expect(lock).to.exist;
-				expect(lock).to.be.an.instanceof(RWLock);
-				expect(lock.key).to.equal('key');
-				expect(lock.isWriteLock).to.be.false;
-				return newLockSet.release();
-			})
-			.then( () => {
-				expect(returnedLockSet._hasLocks()).to.be.false;
-			})
-			.catch( (error) => {
-				if (returnedLockSet) {
-					return returnedLockSet.release().then( () => { throw error; });
-				} else {
-					throw error;
-				}
-			});
+				.then( (newLockSet) => {
+					returnedLockSet = newLockSet;
+					expect(newLockSet._hasLocks()).to.be.true;
+					expect(Object.keys(newLockSet.locks).length).to.equal(1);
+					let lock = newLockSet.getLock('key');
+					expect(lock).to.exist;
+					expect(lock).to.be.an.instanceof(RWLock);
+					expect(lock.key).to.equal('key');
+					expect(lock.isWriteLock).to.be.false;
+					return newLockSet.release();
+				})
+				.then( () => {
+					expect(returnedLockSet._hasLocks()).to.be.false;
+				})
+				.catch( (error) => {
+					if (returnedLockSet) {
+						return returnedLockSet.release().then( () => { throw error; });
+					} else {
+						throw error;
+					}
+				});
 		});
 
 		it('should not add the new read lock to a lock set that already contains a lock of that same key', function() {
 			let readLock;
 			let lockSet = locker.createLockSet();
 			return locker.readLock('key', { maxWaitTime: 0 })
-			.then( (readLock) => {
-				expect(lockSet._hasLocks()).to.be.false;
-				lockSet.addLock(readLock);
-				expect(lockSet._hasLocks()).to.be.true;
-			})
-			.then( () => {
-				return locker.readLockSet([ 'key', 'key1' ], { lockSet });
-			})
-			.then( () => {
-				expect(lockSet._hasLocks()).to.be.true;
-				expect(Object.keys(lockSet.locks).length).to.equal(2);
-				return lockSet.release();
-			})
-			.then( () => {
-				expect(lockSet._hasLocks()).to.be.false;
-			})
-			.catch( (error) => {
-				return lockSet.release()
-				.then( () => {
-					if (readLock) {
-						return readLock.release();
-					}
+				.then( (readLock) => {
+					expect(lockSet._hasLocks()).to.be.false;
+					lockSet.addLock(readLock);
+					expect(lockSet._hasLocks()).to.be.true;
 				})
-				.then( () => { throw error; });
-			});
+				.then( () => {
+					return locker.readLockSet([ 'key', 'key1' ], { lockSet });
+				})
+				.then( () => {
+					expect(lockSet._hasLocks()).to.be.true;
+					expect(Object.keys(lockSet.locks).length).to.equal(2);
+					return lockSet.release();
+				})
+				.then( () => {
+					expect(lockSet._hasLocks()).to.be.false;
+				})
+				.catch( (error) => {
+					return lockSet.release()
+						.then( () => {
+							if (readLock) {
+								return readLock.release();
+							}
+						})
+						.then( () => { throw error; });
+				});
 		});
 
 		it('should return a the given lock set with new read locks appended', function() {
 			let lockSet = locker.createLockSet();
 			return locker.readLock('key')
-			.then( (readLock) => lockSet.addLock(readLock))
-			.then( () => {
-				expect(lockSet.locks.key).to.exist;
-				expect(lockSet.locks.key.isWriteLock).to.be.false;
-			})
-			.then( () => {
-				return locker.readLockSet([ 'key1', 'key2' ], { maxWaitTime: 0, lockSet });
-			})
-			.then( (lockSet) => {
-				expect(lockSet.locks.key).to.exist;
-				expect(lockSet.locks.key.key).to.equal('key');
-				expect(lockSet.locks.key.isWriteLock).to.be.false;
-				expect(lockSet.locks.key1).to.exist;
-				expect(lockSet.locks.key1.key).to.equal('key1');
-				expect(lockSet.locks.key1.isWriteLock).to.be.false;
-				expect(lockSet.locks.key2).to.exist;
-				expect(lockSet.locks.key2.key).to.equal('key2');
-				expect(lockSet.locks.key2.isWriteLock).to.be.false;
-				return lockSet.release();
-			})
-			.catch( (error) => {
-				return lockSet.release()
-				.then( () => { throw error; });
-			});
+				.then( (readLock) => lockSet.addLock(readLock))
+				.then( () => {
+					expect(lockSet.locks.key).to.exist;
+					expect(lockSet.locks.key.isWriteLock).to.be.false;
+				})
+				.then( () => {
+					return locker.readLockSet([ 'key1', 'key2' ], { maxWaitTime: 0, lockSet });
+				})
+				.then( (lockSet) => {
+					expect(lockSet.locks.key).to.exist;
+					expect(lockSet.locks.key.key).to.equal('key');
+					expect(lockSet.locks.key.isWriteLock).to.be.false;
+					expect(lockSet.locks.key1).to.exist;
+					expect(lockSet.locks.key1.key).to.equal('key1');
+					expect(lockSet.locks.key1.isWriteLock).to.be.false;
+					expect(lockSet.locks.key2).to.exist;
+					expect(lockSet.locks.key2.key).to.equal('key2');
+					expect(lockSet.locks.key2.isWriteLock).to.be.false;
+					return lockSet.release();
+				})
+				.catch( (error) => {
+					return lockSet.release();
+				});
 		});
 
 		it('should release all the keys and throw an error if one of the lock scripts fails', function() {
@@ -348,36 +347,36 @@ describe('Class Locker', function() {
 			let readLockMock = sinon.mock(locker);
 			readLockMock.expects('readLock').once().throws(new XError(XError.INTERNAL_ERROR));
 			return locker.readLockSet([ 'key', 'key1' ])
-			.then( (lockSet) => {
-				console.log(lockSet);
-				return lockSet.release();
-			})
-			.then( () => {
-				throw new Error('Should have not returned a lock set');
-			})
-			.catch( (error) => {
-				expect(error).to.be.an.instanceof(XError);
-				expect(error.code).to.equal(XError.INTERNAL_ERROR);
-				readLockMock.verify();
-				readLockMock.restore();
-				return locker.readLockSet([ 'key', 'key1' ])
-				.then( (set) => {
-					lockSet = set;
-					expect(set._hasLocks()).to.be.true;
-					return set.release();
+				.then( (lockSet) => {
+					console.log(lockSet);
+					return lockSet.release();
 				})
 				.then( () => {
-					expect(lockSet._hasLocks()).to.be.false;
+					throw new Error('Should have not returned a lock set');
 				})
 				.catch( (error) => {
-					if (lockSet) {
-						return lockSet.release()
-						.then( () => { throw error; });
-					} else {
-						throw error;
-					}
+					expect(error).to.be.an.instanceof(XError);
+					expect(error.code).to.equal(XError.INTERNAL_ERROR);
+					readLockMock.verify();
+					readLockMock.restore();
+					return locker.readLockSet([ 'key', 'key1' ])
+						.then( (set) => {
+							lockSet = set;
+							expect(set._hasLocks()).to.be.true;
+							return set.release();
+						})
+						.then( () => {
+							expect(lockSet._hasLocks()).to.be.false;
+						})
+						.catch( (error) => {
+							if (lockSet) {
+								return lockSet.release()
+									.then( () => { throw error; });
+							} else {
+								throw error;
+							}
+						});
 				});
-			});
 		});
 	});
 
@@ -386,81 +385,81 @@ describe('Class Locker', function() {
 		it('should lock write for a single key', function() {
 			let writeLocker;
 			return locker.writeLock('key')
-			.then( (rwlock) => {
-				writeLocker = rwlock;
-				expect(rwlock).to.be.an.instanceof(RWLock);
-				expect(rwlock.token).to.exist;
-				expect(rwlock.key).to.equal('key');
-				expect(rwlock.locker).to.equal(locker);
-				expect(rwlock.isWriteLock).to.equal(true);
-				return rwlock.release();
-			})
-			.then( () => {
-				expect(writeLocker.isLocked).to.equal(false);
-			})
-			.catch( (error) => {
-				if (writeLocker) {
-					return writeLocker.release().then( () => {
+				.then( (rwlock) => {
+					writeLocker = rwlock;
+					expect(rwlock).to.be.an.instanceof(RWLock);
+					expect(rwlock.token).to.exist;
+					expect(rwlock.key).to.equal('key');
+					expect(rwlock.locker).to.equal(locker);
+					expect(rwlock.isWriteLock).to.equal(true);
+					return rwlock.release();
+				})
+				.then( () => {
+					expect(writeLocker.isLocked).to.equal(false);
+				})
+				.catch( (error) => {
+					if (writeLocker) {
+						return writeLocker.release().then( () => {
+							throw error;
+						});
+					} else {
 						throw error;
-					});
-				} else {
-					throw error;
-				}
-			});
+					}
+				});
 		});
 
 		it('should fail when trying to lock a previously locked write locker', function() {
 			let writeLocker, writeLocker2;
 			return locker.writeLock('key', { maxWaitTime: 0 })
-			.then( (rwlock) => {
-				writeLocker = rwlock;
-				return locker.writeLock('key', { maxWaitTime: 0 });
-			})
-			.then( (rwlock) => {
-				writeLocker2 = rwlock;
-				throw new Error('Should not have locked the second lock');
-			})
-			.catch( (error) => {
-				return writeLocker.release()
-				.then( () => {
-					if (writeLocker2) {
-						return writeLocker2.release()
-						.then(() => { throw error; });
-					} else {
-						expect(error).to.exist;
-						expect(error).to.be.an.instanceof(XError);
-						expect(error.code).to.equal(XError.RESOURCE_LOCKED);
-						expect(error.message).to.equal('A lock cannot be acquired on the resource: key');
-					}
+				.then( (rwlock) => {
+					writeLocker = rwlock;
+					return locker.writeLock('key', { maxWaitTime: 0 });
+				})
+				.then( (rwlock) => {
+					writeLocker2 = rwlock;
+					throw new Error('Should not have locked the second lock');
+				})
+				.catch( (error) => {
+					return writeLocker.release()
+						.then( () => {
+							if (writeLocker2) {
+								return writeLocker2.release()
+									.then(() => { throw error; });
+							} else {
+								expect(error).to.exist;
+								expect(error).to.be.an.instanceof(XError);
+								expect(error.code).to.equal(XError.RESOURCE_LOCKED);
+								expect(error.message).to.equal('A lock cannot be acquired on the resource: key');
+							}
+						});
 				});
-			});
 		});
 
 		it('should time out when maxWaitTime is reached', function() {
 			this.timeout(5000);
 			let writeLocker, writeLocker2;
 			return locker.writeLock('key', { maxWaitTime: 0 })
-			.then( (rwlock) => {
-				writeLocker = rwlock;
-				return locker.writeLock('key', { maxWaitTime: 2 });
-			}).then( (rwlock) => {
-				writeLocker2 = rwlock;
-				throw new Error('Should not have locked the second lock');
-			})
-			.catch( (error) => {
-				return writeLocker.release()
-				.then( () => {
-					if (writeLocker2) {
-						return writeLocker2.release()
-						.then(() => { throw error; });
-					} else {
-						expect(error).to.exist;
-						expect(error).to.be.an.instanceof(XError);
-						expect(error.code).to.equal(XError.RESOURCE_LOCKED);
-						expect(error.message).to.equal('Timed out trying to get a resource lock for: key');
-					}
+				.then( (rwlock) => {
+					writeLocker = rwlock;
+					return locker.writeLock('key', { maxWaitTime: 2 });
+				}).then( (rwlock) => {
+					writeLocker2 = rwlock;
+					throw new Error('Should not have locked the second lock');
+				})
+				.catch( (error) => {
+					return writeLocker.release()
+						.then( () => {
+							if (writeLocker2) {
+								return writeLocker2.release()
+									.then(() => { throw error; });
+							} else {
+								expect(error).to.exist;
+								expect(error).to.be.an.instanceof(XError);
+								expect(error.code).to.equal(XError.RESOURCE_LOCKED);
+								expect(error.message).to.equal('Timed out trying to get a resource lock for: key');
+							}
+						});
 				});
-			});
 		});
 
 		it('should perform conflict resolution 1', function() {
@@ -581,123 +580,123 @@ describe('Class Locker', function() {
 	describe('#writeLockSet', function() {
 		it('should reject with an error if keys is not an array', function() {
 			return locker.writeLockSet('key')
-			.catch( (error) => {
-				expect(error).to.exist;
-				expect(error).to.be.an.instanceof(XError);
-				expect(error.code).to.equal(XError.INVALID_ARGUMENT);
-				expect(error.message).to.equal('keys must be an array');
-			});
+				.catch( (error) => {
+					expect(error).to.exist;
+					expect(error).to.be.an.instanceof(XError);
+					expect(error.code).to.equal(XError.INVALID_ARGUMENT);
+					expect(error.message).to.equal('keys must be an array');
+				});
 		});
 
 		it('should return a new lock set with the read locks', function() {
 			let returnedLockSet;
 			return locker.writeLockSet([ 'key', 'key1' ], { maxWaitTime: 0 })
-			.then( (newLockSet) => {
-				returnedLockSet = newLockSet;
-				expect(newLockSet.locks.key).to.exist;
-				expect(newLockSet.locks.key.key).to.equal('key');
-				expect(newLockSet.locks.key.isWriteLock).to.be.true;
-				expect(newLockSet.locks.key1).to.exist;
-				expect(newLockSet.locks.key1.key).to.equal('key1');
-				expect(newLockSet.locks.key1.isWriteLock).to.be.true;
-				return newLockSet;
-			})
-			.then( (newLockSet) => {
-				return newLockSet.release();
-			})
-			.catch( (error) => {
-				if (returnedLockSet) {
-					return returnedLockSet.release().then( () => { throw error; });
-				} else {
-					throw error;
-				}
-			});
+				.then( (newLockSet) => {
+					returnedLockSet = newLockSet;
+					expect(newLockSet.locks.key).to.exist;
+					expect(newLockSet.locks.key.key).to.equal('key');
+					expect(newLockSet.locks.key.isWriteLock).to.be.true;
+					expect(newLockSet.locks.key1).to.exist;
+					expect(newLockSet.locks.key1.key).to.equal('key1');
+					expect(newLockSet.locks.key1.isWriteLock).to.be.true;
+					return newLockSet;
+				})
+				.then( (newLockSet) => {
+					return newLockSet.release();
+				})
+				.catch( (error) => {
+					if (returnedLockSet) {
+						return returnedLockSet.release().then( () => { throw error; });
+					} else {
+						throw error;
+					}
+				});
 		});
 
 		it('should return a lock set with one lock when trying to lock the same key', function() {
 			let returnedLockSet;
 			return locker.writeLockSet([ 'key', 'key' ], { maxWaitTime: 0 })
-			.then( (newLockSet) => {
-				returnedLockSet = newLockSet;
-				expect(newLockSet._hasLocks()).to.be.true;
-				expect(Object.keys(newLockSet.locks).length).to.equal(1);
-				let lock = newLockSet.getLock('key');
-				expect(lock).to.exist;
-				expect(lock).to.be.an.instanceof(RWLock);
-				expect(lock.key).to.equal('key');
-				expect(lock.isWriteLock).to.be.true;
-				return newLockSet.release();
-			})
-			.then( () => {
-				expect(returnedLockSet._hasLocks()).to.be.false;
-			})
-			.catch( (error) => {
-				if (returnedLockSet) {
-					return returnedLockSet.release().then( () => { throw error; });
-				} else {
-					throw error;
-				}
-			});
+				.then( (newLockSet) => {
+					returnedLockSet = newLockSet;
+					expect(newLockSet._hasLocks()).to.be.true;
+					expect(Object.keys(newLockSet.locks).length).to.equal(1);
+					let lock = newLockSet.getLock('key');
+					expect(lock).to.exist;
+					expect(lock).to.be.an.instanceof(RWLock);
+					expect(lock.key).to.equal('key');
+					expect(lock.isWriteLock).to.be.true;
+					return newLockSet.release();
+				})
+				.then( () => {
+					expect(returnedLockSet._hasLocks()).to.be.false;
+				})
+				.catch( (error) => {
+					if (returnedLockSet) {
+						return returnedLockSet.release().then( () => { throw error; });
+					} else {
+						throw error;
+					}
+				});
 		});
 
 		it('should not add the new read lock to a lock set that already contains a lock of that same key', function() {
 			let writeLock;
 			let lockSet = locker.createLockSet();
 			return locker.writeLock('key', { maxWaitTime: 0 })
-			.then( (writeLock) => {
-				expect(lockSet._hasLocks()).to.be.false;
-				lockSet.addLock(writeLock);
-				expect(lockSet._hasLocks()).to.be.true;
-			})
-			.then( () => {
-				return locker.writeLockSet([ 'key', 'key1' ], { lockSet });
-			})
-			.then( () => {
-				expect(lockSet._hasLocks()).to.be.true;
-				expect(Object.keys(lockSet.locks).length).to.equal(2);
-				return lockSet.release();
-			})
-			.then( () => {
-				expect(lockSet._hasLocks()).to.be.false;
-			})
-			.catch( (error) => {
-				return lockSet.release()
-				.then( () => {
-					if (writeLock) {
-						return writeLock.release();
-					}
+				.then( (writeLock) => {
+					expect(lockSet._hasLocks()).to.be.false;
+					lockSet.addLock(writeLock);
+					expect(lockSet._hasLocks()).to.be.true;
 				})
-				.then( () => { throw error; });
-			});
+				.then( () => {
+					return locker.writeLockSet([ 'key', 'key1' ], { lockSet });
+				})
+				.then( () => {
+					expect(lockSet._hasLocks()).to.be.true;
+					expect(Object.keys(lockSet.locks).length).to.equal(2);
+					return lockSet.release();
+				})
+				.then( () => {
+					expect(lockSet._hasLocks()).to.be.false;
+				})
+				.catch( (error) => {
+					return lockSet.release()
+						.then( () => {
+							if (writeLock) {
+								return writeLock.release();
+							}
+						})
+						.then( () => { throw error; });
+				});
 		});
 
 		it('should return a the given lock set with new read locks appended', function() {
 			let lockSet = locker.createLockSet();
 			return locker.writeLock('key')
-			.then( (writeLock) => lockSet.addLock(writeLock))
-			.then( () => {
-				expect(lockSet.locks.key).to.exist;
-				expect(lockSet.locks.key.isWriteLock).to.be.true;
-			})
-			.then( () => {
-				return locker.writeLockSet([ 'key1', 'key2' ], { maxWaitTime: 0, lockSet });
-			})
-			.then( (lockSet) => {
-				expect(lockSet.locks.key).to.exist;
-				expect(lockSet.locks.key.key).to.equal('key');
-				expect(lockSet.locks.key.isWriteLock).to.be.true;
-				expect(lockSet.locks.key1).to.exist;
-				expect(lockSet.locks.key1.key).to.equal('key1');
-				expect(lockSet.locks.key1.isWriteLock).to.be.true;
-				expect(lockSet.locks.key2).to.exist;
-				expect(lockSet.locks.key2.key).to.equal('key2');
-				expect(lockSet.locks.key2.isWriteLock).to.be.true;
-				return lockSet.release();
-			})
-			.catch( (error) => {
-				return lockSet.release()
-				.then( () => { throw error; });
-			});
+				.then( (writeLock) => lockSet.addLock(writeLock))
+				.then( () => {
+					expect(lockSet.locks.key).to.exist;
+					expect(lockSet.locks.key.isWriteLock).to.be.true;
+				})
+				.then( () => {
+					return locker.writeLockSet([ 'key1', 'key2' ], { maxWaitTime: 0, lockSet });
+				})
+				.then( (lockSet) => {
+					expect(lockSet.locks.key).to.exist;
+					expect(lockSet.locks.key.key).to.equal('key');
+					expect(lockSet.locks.key.isWriteLock).to.be.true;
+					expect(lockSet.locks.key1).to.exist;
+					expect(lockSet.locks.key1.key).to.equal('key1');
+					expect(lockSet.locks.key1.isWriteLock).to.be.true;
+					expect(lockSet.locks.key2).to.exist;
+					expect(lockSet.locks.key2.key).to.equal('key2');
+					expect(lockSet.locks.key2.isWriteLock).to.be.true;
+					return lockSet.release();
+				})
+				.catch( (error) => {
+					return lockSet.release()
+						.then( () => { throw error; });
+				});
 		});
 
 		it('should release all the keys and throw an error if one of the lock scripts fails', function() {
@@ -705,35 +704,35 @@ describe('Class Locker', function() {
 			let writeLockMock = sinon.mock(locker);
 			writeLockMock.expects('writeLock').once().throws(new XError(XError.INTERNAL_ERROR));
 			return locker.writeLockSet([ 'key', 'key1' ])
-			.then( (lockSet) => {
-				return lockSet.release();
-			})
-			.then( () => {
-				throw new Error('Should have not returned a lock set');
-			})
-			.catch( (error) => {
-				expect(error).to.be.an.instanceof(XError);
-				expect(error.code).to.equal(XError.INTERNAL_ERROR);
-				writeLockMock.verify();
-				writeLockMock.restore();
-				return locker.writeLockSet([ 'key', 'key1' ])
-				.then( (set) => {
-					lockSet = set;
-					expect(set._hasLocks()).to.be.true;
-					return set.release();
+				.then( (lockSet) => {
+					return lockSet.release();
 				})
 				.then( () => {
-					expect(lockSet._hasLocks()).to.be.false;
+					throw new Error('Should have not returned a lock set');
 				})
 				.catch( (error) => {
-					if (lockSet) {
-						return lockSet.release()
-						.then( () => { throw error; });
-					} else {
-						throw error;
-					}
+					expect(error).to.be.an.instanceof(XError);
+					expect(error.code).to.equal(XError.INTERNAL_ERROR);
+					writeLockMock.verify();
+					writeLockMock.restore();
+					return locker.writeLockSet([ 'key', 'key1' ])
+						.then( (set) => {
+							lockSet = set;
+							expect(set._hasLocks()).to.be.true;
+							return set.release();
+						})
+						.then( () => {
+							expect(lockSet._hasLocks()).to.be.false;
+						})
+						.catch( (error) => {
+							if (lockSet) {
+								return lockSet.release()
+									.then( () => { throw error; });
+							} else {
+								throw error;
+							}
+						});
 				});
-			});
 		});
 	});
 
@@ -929,18 +928,18 @@ describe('Class LockSet', function() {
 				expect(lock.isLocked).to.be.true;
 				return lockSet.release();
 			})
-			.then( () => {
-				expect(lockSet._hasLocks()).to.be.false;
-			})
-			.catch( (error) => {
-				return lockSet.release().then( () => {
-					if (readLock && readLock.isLocked) {
-						return readLock.release().then( () => { throw error; });
-					} else {
-						throw error;
-					}
+				.then( () => {
+					expect(lockSet._hasLocks()).to.be.false;
+				})
+				.catch( (error) => {
+					return lockSet.release().then( () => {
+						if (readLock && readLock.isLocked) {
+							return readLock.release().then( () => { throw error; });
+						} else {
+							throw error;
+						}
+					});
 				});
-			});
 		});
 
 		it('should create a lock set of reads and then upgrade them to write locks', function() {
@@ -956,28 +955,28 @@ describe('Class LockSet', function() {
 				expect(lock.isLocked).to.be.true;
 				return lockSet.upgrade();
 			})
-			.then( () => {
-				let lock = lockSet.getLock('key');
-				expect(lock).to.exist;
-				expect(lock).to.be.an.instanceof(RWLock);
-				expect(lock.key).to.equal('key');
-				expect(lock.isWriteLock).to.be.true;
-				expect(lock.isLocked).to.be.true;
-				expect(lockSet._hasLocks()).to.be.true;
-				return lockSet.release();
-			})
-			.then( () => {
-				expect(lockSet._hasLocks()).to.be.false;
-			})
-			.catch( (error) => {
-				return lockSet.release().then( () => {
-					if (readLock && readLock.isLocked) {
-						return readLock.release().then( () => { throw error; });
-					} else {
-						throw error;
-					}
+				.then( () => {
+					let lock = lockSet.getLock('key');
+					expect(lock).to.exist;
+					expect(lock).to.be.an.instanceof(RWLock);
+					expect(lock.key).to.equal('key');
+					expect(lock.isWriteLock).to.be.true;
+					expect(lock.isLocked).to.be.true;
+					expect(lockSet._hasLocks()).to.be.true;
+					return lockSet.release();
+				})
+				.then( () => {
+					expect(lockSet._hasLocks()).to.be.false;
+				})
+				.catch( (error) => {
+					return lockSet.release().then( () => {
+						if (readLock && readLock.isLocked) {
+							return readLock.release().then( () => { throw error; });
+						} else {
+							throw error;
+						}
+					});
 				});
-			});
 		});
 
 	});
@@ -1044,24 +1043,24 @@ describe('Class LockSet', function() {
 				expect(lockSet._hasLocks()).to.be.false;
 			}).catch( (error) => {
 				return lockSet.release()
-				.then( () => {
-					if (writeLock) {
-						return writeLock.release();
-					}
-				})
-				.then( () => {
-					if (writeLock1) {
-						return writeLock1.release();
-					}
-				})
-				.then( () => {
-					if (readLock) {
-						return readLock.release();
-					}
-				})
-				.then( () => {
-					throw error;
-				});
+					.then( () => {
+						if (writeLock) {
+							return writeLock.release();
+						}
+					})
+					.then( () => {
+						if (writeLock1) {
+							return writeLock1.release();
+						}
+					})
+					.then( () => {
+						if (readLock) {
+							return readLock.release();
+						}
+					})
+					.then( () => {
+						throw error;
+					});
 			});
 		});
 	});

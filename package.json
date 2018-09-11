@@ -1,8 +1,8 @@
 {
   "name": "rediz-lock",
-  "version": "1.4.4",
+  "version": "2.0.0",
   "description": "Fast and flexible redis locks",
-  "main": "./dist/lib/index.js",
+  "main": "./lib/index.js",
   "repository": {
     "type": "git",
     "url": "https://github.com/zipscene/rediz-lock.git"
@@ -15,34 +15,27 @@
   "scripts": {
     "lint": "node ./node_modules/.bin/eslint . || exit 0",
     "docs": "node ./node_modules/.bin/yuidoc .",
-    "test": "npm run-script build && node ./node_modules/.bin/mocha ./dist/test -R spec",
-    "build": "rm -rf dist && ./node_modules/.bin/broccoli build dist && rm -rf tmp",
-    "prepublish": "npm run-script build && npm run-script docs"
+    "test": "node ./node_modules/.bin/mocha ./test -R spec",
+    "prepublishOnly": "npm run-script docs"
   },
   "dependencies": {
-    "babel-runtime": "5.8.24",
-    "lodash": "^3.10.1",
-    "node-uuid": "^1.4.3",
-    "objtools": "^1.6.3",
-    "pasync": "^1.4.1",
-    "simprof": "^1.2.5",
-    "xerror": "^1.0.0"
+    "lodash": "^4.17.10",
+    "objtools": "^2.0.1",
+    "pasync": "^1.5.0",
+    "simprof": "^2.0.0",
+    "uuid": "^3.3.2",
+    "xerror": "^1.1.2"
   },
   "devDependencies": {
-    "broccoli": "^0.16.8",
-    "broccoli-babel-transpiler": "^5.4.5",
-    "broccoli-cli": "^1.0.0",
-    "broccoli-merge-trees": "^0.2.3",
-    "broccoli-static-compiler": "^0.2.2",
-    "broccoli-wrap": "0.0.2",
-    "chai": "^3.3.0",
-    "es6-promise": "^3.0.2",
-    "eslint": "^1.5.1",
-    "mocha": "^2.3.3",
-    "sinon": "^1.17.1",
-    "source-map-support": "^0.3.2",
-    "yuidocjs": "^0.9.0",
-    "rediz": "^1.0.0"
+    "chai": "^4.1.2",
+    "eslint": "^5.5.0",
+    "mocha": "^5.2.0",
+    "rediz": "^3.0.0",
+    "sinon": "^6.2.0",
+    "yuidocjs": "^0.10.2"
   },
-  "license": "Apache-2.0"
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">= 8.0.0"
+  }
 }
