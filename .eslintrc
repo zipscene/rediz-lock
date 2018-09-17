@@ -3,6 +3,9 @@
 		"es6": true,
 		"node": true
 	},
+	"parserOptions": {
+		"ecmaVersion": 2017,
+	},
 	"rules": {
 		"comma-dangle": 2,
 		"no-cond-assign": 2,

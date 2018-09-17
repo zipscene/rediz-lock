@@ -19,19 +19,19 @@
     "prepublishOnly": "npm run-script docs"
   },
   "dependencies": {
-    "lodash": "^4.17.10",
+    "lodash": "^4.17.11",
     "objtools": "^2.0.1",
     "pasync": "^1.5.0",
-    "simprof": "^2.0.0",
+    "simprof": "^2.1.0",
     "uuid": "^3.3.2",
     "xerror": "^1.1.2"
   },
   "devDependencies": {
     "chai": "^4.1.2",
-    "eslint": "^5.5.0",
+    "eslint": "^5.6.0",
     "mocha": "^5.2.0",
-    "rediz": "^3.0.0",
-    "sinon": "^6.2.0",
+    "rediz": "^3.1.1",
+    "sinon": "^6.3.3",
     "yuidocjs": "^0.10.2"
   },
   "license": "Apache-2.0",
