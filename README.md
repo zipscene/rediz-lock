@@ -154,3 +154,30 @@ dependentLockSet.writeLock(...);
 lockSet.readLockSet([ 'key1', 'key2', ... ]) // -> LockSet
 lockSet.writeLockSet([ 'key1', 'key2', ... ]) // -> LockSet
 ```
+
+## Distributed Reader/Writer Locks
+
+In workloads where there will be many concurrent readers (enough to overwhelm a single redis shard)
+but infrequent writers, "distributed" locks can be used.  These can be enabled by passing
+`{ distributed: true }` to the options of `readLock()` and `writeLock()`.  A distributed read lock
+selects a randomized shard to store the read lock instead of a consistent shard assigned by key.  This
+allows the load of reader locks to be distributed across multiple shards.  A distributed write lock
+is locked on every available shard.
+
+## Conflict Resolution Locks
+
+This type of write lock can be helpful in cases to prevent deadlocks while guaranteeing forward
+progress in distributed workloads.  It is generally used where normal deadlock prevention algorithms
+won't work or are insufficient.
+
+If the `{ resolveConflicts: true }` option is given to `writeLock()`, it enables special behavior in
+the case that the lock is already held by another process.  If another process already holds the lock,
+then a "winner" is chosen between the current process and the existing lock holder.  If the current
+process is the winner, the write lock behaves normally (it waits for the other process to release the lock,
+then obtains the lock itself).  If the current process is the loser, then `writeLock()` immediately fails
+with a `RESOURCE_LOCKED` error.  (In the latter case, the application would typically release all other
+locks it holds, then retry the operation after a delay.)
+
+Generally, the winner is chosen randomly between the two competing processes.  This can be tweaked by
+supplying the `conflictPriority` option.  This option is a number from 0-99 and defaults to 50.  If two
+processes conflict with different priorities, then the one with the lowest number wll be the winner.
