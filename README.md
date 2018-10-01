@@ -164,6 +164,13 @@ selects a randomized shard to store the read lock instead of a consistent shard 
 allows the load of reader locks to be distributed across multiple shards.  A distributed write lock
 is locked on every available shard.
 
+It is also possible for `writeLock()` to automatically detect whether a distributed read lock has been
+recently established on a key, and automatically choose between a distributed lock and a normal lock.
+To enable this behavior, pass `{ distributed: 'auto' }` to `writeLock()`.  By default, `readLock()`
+will set additional flags when operating in distributed mode to allow `writeLock()` to detect this.
+If not using this automatic functionality, this behavior in `readLock()` can be disabled for added
+efficiency by passing `{ enableDistributedAuto: false }`.
+
 ## Conflict Resolution Locks
 
 This type of write lock can be helpful in cases to prevent deadlocks while guaranteeing forward
