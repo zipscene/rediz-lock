@@ -18,10 +18,10 @@ const REDIZ_CONFIG = {
 
 describe('Class Locker', function() {
 	let redizClient, locker;
-	beforeEach( function(done) {
+	beforeEach(async function() {
 		redizClient = new RedizClient(REDIZ_CONFIG);
+		await redizClient.flushAllShards();
 		locker = new Locker(redizClient);
-		done();
 	});
 
 	it('construct a locker with a redis client, and a scriptWaiter', function() {
@@ -1211,6 +1211,68 @@ describe('Class LockSet', function() {
 				.then(() => {
 					expect(lock.isLocked).to.equal(false);
 				});
+		});
+
+	});
+
+	describe('Distributed RW Locks', function() {
+
+		let otherRedizClient;
+		let otherLocker;
+
+		beforeEach(async function() {
+			otherRedizClient = new RedizClient(REDIZ_CONFIG);
+			otherLocker = new Locker(otherRedizClient);
+			await redizClient.flushAllShards();
+		});
+
+		it('should be able to relock a distributed write lock', async function() {
+			let lock = await locker.writeLock('foo12345', { distributed: true });
+			await lock.release();
+			lock = await locker.writeLock('foo12345', { distributed: true, maxWaitTime: 0 });
+			await lock.release();
+		});
+
+		it('write locks block read locks on multiple shards', async function() {
+			let writeLock = await locker.writeLock('foo12345', { distributed: true });
+			for (let i = 0; i < 10; i++) {
+				try {
+					await otherLocker.readLock('foo12345', { maxWaitTime: 0, distributed: true });
+				} catch (ex) {
+					expect(ex.code).to.equal(XError.RESOURCE_LOCKED);
+					continue;
+				}
+				throw new Error('Expected to throw');
+			}
+			await writeLock.release();
+		});
+
+		it('read locks block write locks on single shard', async function() {
+			let readLock = await locker.readLock('foo12345', { distributed: true });
+			try {
+				await otherLocker.writeLock('foo12345', { distributed: true, maxWaitTime: 0 });
+			} catch (ex) {
+				expect(ex.code).to.equal(XError.RESOURCE_LOCKED);
+				await readLock.release();
+				return;
+			}
+			throw new Error('Expected to throw');
+		});
+
+		it('write lock with auto distributed is normal lock without prior read lock', async function() {
+			let rlock = await locker.readLock('foo');
+			await rlock.release();
+			let wlock = await otherLocker.writeLock('foo', { distributed: 'auto' });
+			expect(wlock.rwlocks).to.not.exist;
+			await wlock.release();
+		});
+
+		it('write lock with auto distributed is distributed lock with prior read lock', async function() {
+			let rlock = await locker.readLock('foo', { distributed: true });
+			await rlock.release();
+			let wlock = await otherLocker.writeLock('foo', { distributed: 'auto' });
+			expect(wlock.rwlocks).to.exist;
+			await wlock.release();
 		});
 
 	});
