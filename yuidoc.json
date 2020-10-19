@@ -1,8 +1,0 @@
-{
-	"name": "rediz-lock",
-	"description": "Locking library for rediz",
-	"options": {
-		"outdir": "./docs",
-		"exclude": "dist,tmp,test,node_modules"
-	}
-}
